@@ -1,0 +1,55 @@
+[gd_scene format=3 uid="uid://ww_level3_waddle_wars_01"]
+
+[ext_resource type="Script" path="res://scripts/levels/level3_waddle_wars.gd" id="1_l3"]
+[ext_resource type="PackedScene" path="res://scenes/hud.tscn" id="2_hud"]
+
+[sub_resource type="Gradient" id="Gradient_aurora_sky"]
+colors = PackedColorArray(0.06, 0.12, 0.28, 1, 0.2, 0.55, 0.65, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_aurora_sky"]
+gradient = SubResource("Gradient_aurora_sky")
+fill_from = Vector2(0.5, 0)
+fill_to = Vector2(0.5, 1)
+
+[sub_resource type="Gradient" id="Gradient_snow_ice"]
+colors = PackedColorArray(0.85, 0.95, 1, 1, 0.6, 0.8, 0.95, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_snow_ice"]
+gradient = SubResource("Gradient_snow_ice")
+fill_from = Vector2(0.5, 0)
+fill_to = Vector2(0.5, 1)
+
+[node name="Level3WaddleWars" type="Node2D"]
+script = ExtResource("1_l3")
+
+[node name="HUD" parent="." instance=ExtResource("2_hud")]
+
+[node name="AuroraSky" type="TextureRect" parent="."]
+offset_right = 1280.0
+offset_bottom = 720.0
+texture = SubResource("GradientTexture2D_aurora_sky")
+
+[node name="IceGround" type="TextureRect" parent="."]
+offset_top = 580.0
+offset_right = 1280.0
+offset_bottom = 720.0
+texture = SubResource("GradientTexture2D_snow_ice")
+
+[node name="Penguin" type="Node2D" parent="."]
+
+[node name="CrystalsContainer" type="Node2D" parent="."]
+
+[node name="ObstacleContainer" type="Node2D" parent="."]
+
+[node name="SnowParticles" type="CPUParticles2D" parent="."]
+position = Vector2(640, 0)
+amount = 60
+lifetime = 3.5
+emission_shape = 3
+emission_rect_extents = Vector2(640, 10)
+gravity = Vector2(-20, 150)
+initial_velocity_min = 20.0
+initial_velocity_max = 60.0
+scale_amount_min = 2.0
+scale_amount_max = 5.0
+color = Color(1, 1, 1, 0.8)

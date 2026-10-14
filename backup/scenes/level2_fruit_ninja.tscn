@@ -1,0 +1,51 @@
+[gd_scene format=3 uid="uid://ww_level2_fruit_ninja_01"]
+
+[ext_resource type="Script" path="res://scripts/levels/level2_fruit_ninja.gd" id="1_l2"]
+[ext_resource type="PackedScene" path="res://scenes/hud.tscn" id="2_hud"]
+
+[sub_resource type="Gradient" id="Gradient_tropical_sky"]
+colors = PackedColorArray(0.95, 0.45, 0.25, 1, 0.35, 0.75, 0.95, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_tropical_sky"]
+gradient = SubResource("Gradient_tropical_sky")
+fill_from = Vector2(0.5, 1)
+fill_to = Vector2(0.5, 0)
+
+[sub_resource type="Gradient" id="Gradient_platform"]
+colors = PackedColorArray(0.4, 0.25, 0.15, 1, 0.6, 0.4, 0.22, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_platform"]
+gradient = SubResource("Gradient_platform")
+fill_from = Vector2(0, 0)
+fill_to = Vector2(0, 1)
+
+[sub_resource type="Curve" id="Curve_blade"]
+_data = [Vector2(0, 0.2), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[node name="Level2FruitNinja" type="Node2D"]
+script = ExtResource("1_l2")
+
+[node name="HUD" parent="." instance=ExtResource("2_hud")]
+
+[node name="TropicalSky" type="TextureRect" parent="."]
+offset_right = 1280.0
+offset_bottom = 720.0
+texture = SubResource("GradientTexture2D_tropical_sky")
+
+[node name="WoodenPlatform" type="TextureRect" parent="."]
+offset_top = 640.0
+offset_right = 1280.0
+offset_bottom = 720.0
+texture = SubResource("GradientTexture2D_platform")
+
+[node name="FruitContainer" type="Node2D" parent="."]
+
+[node name="SplashContainer" type="Node2D" parent="."]
+
+[node name="BladeTrail" type="Line2D" parent="."]
+width = 14.0
+width_curve = SubResource("Curve_blade")
+default_color = Color(0.4, 0.9, 1, 0.85)
+begin_cap_mode = 2
+end_cap_mode = 2

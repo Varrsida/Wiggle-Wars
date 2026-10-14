@@ -1,0 +1,201 @@
+[gd_scene format=3 uid="uid://ww_level1_face_frenzy_01"]
+
+[ext_resource type="Script" path="res://scripts/levels/level1_face_frenzy.gd" id="1_l1"]
+[ext_resource type="PackedScene" path="res://scenes/hud.tscn" id="2_hud"]
+
+[sub_resource type="Gradient" id="Gradient_sky"]
+colors = PackedColorArray(0.15, 0.1, 0.35, 1, 0.4, 0.65, 0.85, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_sky"]
+gradient = SubResource("Gradient_sky")
+fill_from = Vector2(0.5, 0)
+fill_to = Vector2(0.5, 1)
+
+[sub_resource type="Gradient" id="Gradient_hills_back"]
+colors = PackedColorArray(0.18, 0.35, 0.45, 1, 0.25, 0.55, 0.4, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_hills_back"]
+gradient = SubResource("Gradient_hills_back")
+fill_from = Vector2(0.5, 0)
+fill_to = Vector2(0.5, 1)
+
+[sub_resource type="Gradient" id="Gradient_hills_front"]
+colors = PackedColorArray(0.15, 0.52, 0.28, 1, 0.28, 0.75, 0.38, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_hills_front"]
+gradient = SubResource("Gradient_hills_front")
+fill_from = Vector2(0.5, 0)
+fill_to = Vector2(0.5, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_obj_panel"]
+bg_color = Color(0.1, 0.08, 0.22, 0.88)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.95, 0.3, 0.75, 0.9)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+shadow_color = Color(0.9, 0.2, 0.7, 0.25)
+shadow_size = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_victory"]
+bg_color = Color(0.12, 0.08, 0.26, 0.98)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(1, 0.85, 0.2, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+shadow_color = Color(1, 0.8, 0.2, 0.4)
+shadow_size = 16
+
+[node name="Level1FaceFrenzy" type="Node2D"]
+script = ExtResource("1_l1")
+
+[node name="HUD" parent="." instance=ExtResource("2_hud")]
+
+[node name="Sky" type="TextureRect" parent="."]
+offset_right = 1280.0
+offset_bottom = 720.0
+texture = SubResource("GradientTexture2D_sky")
+
+[node name="DistantHills" type="TextureRect" parent="."]
+offset_top = 420.0
+offset_right = 1280.0
+offset_bottom = 720.0
+texture = SubResource("GradientTexture2D_hills_back")
+
+[node name="FrontHills" type="TextureRect" parent="."]
+offset_top = 520.0
+offset_right = 1280.0
+offset_bottom = 720.0
+texture = SubResource("GradientTexture2D_hills_front")
+
+[node name="GardenCanvas" type="Node2D" parent="."]
+
+[node name="BubbleContainer" type="Node2D" parent="."]
+
+[node name="StarContainer" type="Node2D" parent="."]
+
+[node name="SparkleParticles" type="CPUParticles2D" parent="."]
+position = Vector2(640, 480)
+amount = 25
+lifetime = 2.5
+emission_shape = 3
+emission_rect_extents = Vector2(640, 200)
+gravity = Vector2(0, -30)
+scale_amount_min = 2.0
+scale_amount_max = 5.0
+color = Color(1, 0.95, 0.5, 0.7)
+
+[node name="WindParticles" type="CPUParticles2D" parent="."]
+position = Vector2(0, 360)
+emitting = false
+amount = 50
+lifetime = 1.2
+one_shot = true
+speed_scale = 1.5
+emission_shape = 3
+emission_rect_extents = Vector2(10, 250)
+spread = 15.0
+gravity = Vector2(250, 20)
+initial_velocity_min = 650.0
+initial_velocity_max = 1000.0
+scale_amount_min = 3.0
+scale_amount_max = 7.0
+color = Color(0.9, 0.98, 1, 0.9)
+
+[node name="LevelUI" type="CanvasLayer" parent="."]
+layer = 5
+
+[node name="ObjectivePanel" type="PanelContainer" parent="LevelUI"]
+offset_left = 25.0
+offset_top = 90.0
+offset_right = 370.0
+offset_bottom = 295.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_obj_panel")
+
+[node name="Margin" type="MarginContainer" parent="LevelUI/ObjectivePanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 12
+
+[node name="VBox" type="VBoxContainer" parent="LevelUI/ObjectivePanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 7
+
+[node name="Header" type="Label" parent="LevelUI/ObjectivePanel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.88, 0.25, 1)
+theme_override_font_sizes/font_size = 16
+text = "EXPRESSION OBJECTIVES (0 / 5)"
+
+[node name="HSeparator" type="HSeparator" parent="LevelUI/ObjectivePanel/Margin/VBox"]
+layout_mode = 2
+
+[node name="SmileObj" type="Label" parent="LevelUI/ObjectivePanel/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "🌸 SMILE: Show your biggest grin (+10)"
+
+[node name="MouthObj" type="Label" parent="LevelUI/ObjectivePanel/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "🫧 OPEN MOUTH: Open wide for bubbles (+10)"
+
+[node name="EyebrowsObj" type="Label" parent="LevelUI/ObjectivePanel/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "⭐ RAISE EYEBROWS: Lift brows up (+10)"
+
+[node name="SleepyObj" type="Label" parent="LevelUI/ObjectivePanel/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "🌙 SLEEPY: Hold eyes closed 1s (+15)"
+
+[node name="SurprisedObj" type="Label" parent="LevelUI/ObjectivePanel/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "💨 SURPRISED: Wide eyes & mouth (+15)"
+
+[node name="VictoryPanel" type="PanelContainer" parent="LevelUI"]
+visible = false
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -280.0
+offset_top = -100.0
+offset_right = 280.0
+offset_bottom = 100.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_victory")
+
+[node name="VBox" type="VBoxContainer" parent="LevelUI/VictoryPanel"]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="VictoryTitle" type="Label" parent="LevelUI/VictoryPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.25, 1)
+theme_override_font_sizes/font_size = 28
+text = "🌸 GARDEN FULLY BLOOMED! 🌸"
+horizontal_alignment = 1
+
+[node name="VictorySub" type="Label" parent="LevelUI/VictoryPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 1, 0.5, 1)
+theme_override_font_sizes/font_size = 20
+text = "SUPERSTAR PERFORMANCE! +55 BONUS!"
+horizontal_alignment = 1

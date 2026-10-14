@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://ww_screenshot_capturer_01"]
+
+[ext_resource type="Script" path="res://scripts/tests/screenshot_capturer.gd" id="1_sc"]
+
+[node name="ScreenshotCapturer" type="Node"]
+script = ExtResource("1_sc")

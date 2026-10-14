@@ -1,0 +1,196 @@
+[gd_scene format=3 uid="uid://ww_webcam_setup_01"]
+
+[ext_resource type="Script" path="res://scripts/ui/webcam_setup.gd" id="1_setup"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
+bg_color = Color(0.08, 0.1, 0.18, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_preview_card"]
+bg_color = Color(0.12, 0.15, 0.26, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.3, 0.6, 0.9, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_instructions_card"]
+bg_color = Color(0.14, 0.17, 0.3, 0.9)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.9, 0.7, 0.2, 0.8)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[node name="WebcamSetup" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_setup")
+
+[node name="Background" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_bg")
+
+[node name="Content" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 40.0
+offset_top = 30.0
+offset_right = -40.0
+offset_bottom = -30.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 20
+
+[node name="TitleBox" type="HBoxContainer" parent="Content"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Content/TitleBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 0.85, 0.3, 1)
+theme_override_font_sizes/font_size = 32
+text = "📷 WEBCAM SETUP & CALIBRATION"
+
+[node name="BackBtn" type="Button" parent="Content/TitleBox"]
+custom_minimum_size = Vector2(120, 40)
+layout_mode = 2
+text = "Back to Menu 🏠"
+
+[node name="HBox" type="HBoxContainer" parent="Content"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 30
+
+[node name="LeftCol" type="VBoxContainer" parent="Content/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+
+[node name="PreviewPanel" type="PanelContainer" parent="Content/HBox/LeftCol"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_preview_card")
+
+[node name="VideoPreview" type="TextureRect" parent="Content/HBox/LeftCol/PreviewPanel"]
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="StatusBadge" type="Label" parent="Content/HBox/LeftCol"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "○ WAITING FOR TRACKER..."
+horizontal_alignment = 1
+
+[node name="RightCol" type="VBoxContainer" parent="Content/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 16
+
+[node name="InstructionsPanel" type="PanelContainer" parent="Content/HBox/RightCol"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_instructions_card")
+
+[node name="Margin" type="MarginContainer" parent="Content/HBox/RightCol/InstructionsPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="VBox" type="VBoxContainer" parent="Content/HBox/RightCol/InstructionsPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Header" type="Label" parent="Content/HBox/RightCol/InstructionsPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.3, 1)
+theme_override_font_sizes/font_size = 20
+text = "HOW TO GET THE BEST TRACKING:"
+
+[node name="Tip1" type="Label" parent="Content/HBox/RightCol/InstructionsPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "✨ 1. Good Lighting: Sit or stand in a well-lit room facing your camera."
+
+[node name="Tip2" type="Label" parent="Content/HBox/RightCol/InstructionsPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "🧍 2. Distance: Keep your face, shoulders, and hands visible in the frame."
+
+[node name="Tip3" type="Label" parent="Content/HBox/RightCol/InstructionsPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "🎯 3. Neutral Pose: Press 'Calibrate' while sitting or standing comfortably."
+
+[node name="Tip4" type="Label" parent="Content/HBox/RightCol/InstructionsPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "⌨️ 4. Test fallback: Keys 1-5, Arrows, W, A, D, J, B, S, F, C work anytime!"
+
+[node name="GesturesBox" type="VBoxContainer" parent="Content/HBox/RightCol"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="FaceFeedback" type="Label" parent="Content/HBox/RightCol/GesturesBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Face tracking: Smile or open mouth to test..."
+
+[node name="HandFeedback" type="Label" parent="Content/HBox/RightCol/GesturesBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Hand tracking: Wave your hand or swipe to test..."
+
+[node name="PoseFeedback" type="Label" parent="Content/HBox/RightCol/GesturesBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Pose tracking: Lean left or raise arms to test..."
+
+[node name="BottomBar" type="HBoxContainer" parent="Content"]
+custom_minimum_size = Vector2(0, 55)
+layout_mode = 2
+theme_override_constants/separation = 20
+alignment = 2
+
+[node name="RetryBtn" type="Button" parent="Content/BottomBar"]
+custom_minimum_size = Vector2(160, 48)
+layout_mode = 2
+text = "Check Tracker 🔄"
+
+[node name="CalibrateBtn" type="Button" parent="Content/BottomBar"]
+custom_minimum_size = Vector2(160, 48)
+layout_mode = 2
+text = "Calibrate Pose 🎯"
+
+[node name="ContinueBtn" type="Button" parent="Content/BottomBar"]
+custom_minimum_size = Vector2(220, 48)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 0.4, 1)
+theme_override_font_sizes/font_size = 18
+text = "Start Level 1! 🚀"
+
+[connection signal="pressed" from="Content/TitleBox/BackBtn" to="." method="_on_back_pressed"]
+[connection signal="pressed" from="Content/BottomBar/RetryBtn" to="." method="_on_retry_pressed"]
+[connection signal="pressed" from="Content/BottomBar/CalibrateBtn" to="." method="_on_calibrate_pressed"]
+[connection signal="pressed" from="Content/BottomBar/ContinueBtn" to="." method="_on_continue_pressed"]
