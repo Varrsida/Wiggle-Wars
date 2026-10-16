@@ -1,28 +1,35 @@
 [gd_scene format=3 uid="uid://ww_main_menu_01"]
 
 [ext_resource type="Script" path="res://scripts/ui/main_menu.gd" id="1_menu"]
-
-[sub_resource type="Gradient" id="Gradient_menu_bg"]
-colors = PackedColorArray(0.1, 0.05, 0.22, 1, 0.25, 0.08, 0.35, 1)
-
-[sub_resource type="GradientTexture2D" id="GradientTexture2D_menu_bg"]
-gradient = SubResource("Gradient_menu_bg")
-fill_from = Vector2(0.5, 0)
-fill_to = Vector2(0.5, 1)
+[ext_resource type="Texture2D" path="res://assets/backgrounds/magical_forest_bg.png" id="2_magical_forest_bg"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_modal"]
-bg_color = Color(0.12, 0.08, 0.28, 0.98)
+bg_color = Color(0.2, 0.08, 0.3, 0.92)
 border_width_left = 3
 border_width_top = 3
 border_width_right = 3
 border_width_bottom = 3
-border_color = Color(0.3, 0.85, 1, 1)
+border_color = Color(1, 0.72, 0.9, 1)
 corner_radius_top_left = 18
 corner_radius_top_right = 18
 corner_radius_bottom_right = 18
 corner_radius_bottom_left = 18
-shadow_color = Color(0.3, 0.85, 1, 0.3)
-shadow_size = 12
+shadow_color = Color(0.9, 0.3, 0.75, 0.35)
+shadow_size = 14
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_play_btn"]
+bg_color = Color(0.85, 0.22, 0.65, 0.95)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 0.92, 0.5, 1)
+corner_radius_top_left = 22
+corner_radius_top_right = 22
+corner_radius_bottom_right = 22
+corner_radius_bottom_left = 22
+shadow_color = Color(1, 0.5, 0.85, 0.5)
+shadow_size = 10
 
 [node name="MainMenu" type="Control"]
 layout_mode = 3
@@ -40,20 +47,22 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-texture = SubResource("GradientTexture2D_menu_bg")
+texture = ExtResource("2_magical_forest_bg")
+expand_mode = 1
+stretch_mode = 6
 
 [node name="MenuSparkles" type="CPUParticles2D" parent="."]
 position = Vector2(640, 720)
-amount = 40
-lifetime = 4.0
+amount = 50
+lifetime = 4.5
 emission_shape = 3
 emission_rect_extents = Vector2(640, 10)
-gravity = Vector2(0, -60)
-initial_velocity_min = 20.0
-initial_velocity_max = 80.0
+gravity = Vector2(0, -50)
+initial_velocity_min = 25.0
+initial_velocity_max = 75.0
 scale_amount_min = 3.0
-scale_amount_max = 6.0
-color = Color(1, 0.5, 0.9, 0.6)
+scale_amount_max = 6.5
+color = Color(1, 0.7, 0.92, 0.75)
 
 [node name="VBox" type="VBoxContainer" parent="."]
 layout_mode = 1
@@ -123,8 +132,12 @@ horizontal_alignment = 1
 custom_minimum_size = Vector2(360, 68)
 layout_mode = 2
 size_flags_horizontal = 4
-theme_override_colors/font_color = Color(1, 1, 0.35, 1)
-theme_override_font_sizes/font_size = 26
+theme_override_colors/font_color = Color(1, 1, 0.7, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 28
+theme_override_styles/normal = SubResource("StyleBoxFlat_play_btn")
+theme_override_styles/hover = SubResource("StyleBoxFlat_play_btn")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_play_btn")
 text = "LET'S PLAY! 🚀✨"
 
 [node name="SubButtons" type="HBoxContainer" parent="VBox"]

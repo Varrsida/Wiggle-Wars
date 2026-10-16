@@ -50,18 +50,19 @@ var outcome_textures: Dictionary = {
 	6: preload("res://assets/sprites/outcome_robot_dance.png")
 }
 
-# Round Phases (Exactly 30-Second Master Timeline)
+# Round Phases (Exactly 20-Second Master Timeline)
 enum Phase {
-	INTRO_SPIN,        # 0.0 - 4.0s (Smooth wheel spin & selection)
-	CHALLENGE_PHASE,   # 4.0 - 19.0s (Selected challenge / activity)
-	CELEBRATION_PHASE, # 19.0 - 24.0s (Reward / result reveal)
-	FINALE_PHASE       # 24.0 - 30.0s (Celebration & transition preparation)
+	INTRO_SPIN,        # 0.0 - 3.0s (Smooth wheel spin & selection)
+	CHALLENGE_PHASE,   # 3.0 - 18.0s (Selected challenge / activity, max 15s)
+	RESULT_PHASE       # 18.0 - 20.0s (Result reveal & transition)
 }
 
 var current_phase: Phase = Phase.INTRO_SPIN
 var time_elapsed: float = 0.0
-const TOTAL_ROUND_TIME: float = 30.0
+const TOTAL_ROUND_TIME: float = 20.0
 var level_finished: bool = false
+var challenge_success: bool = false
+var result_displayed: bool = false
 
 # Wheel Spin Variables
 var wheel_angle: float = 0.0
@@ -117,15 +118,19 @@ func _process(delta: float) -> void:
 	var time_remaining := maxf(0.0, TOTAL_ROUND_TIME - time_elapsed)
 	hud.set_timer(time_remaining)
 
-	# Master State Machine (Single source of truth: 30-Second Total Session)
-	if time_elapsed < 4.0:
+	# Master State Machine (Exactly 20-Second Total Session)
+	# 0.0 - 3.0s: Spin phase
+	# 3.0 - 18.0s: Challenge phase (up to 15s)
+	# 18.0 - 20.0s: Result reveal & transition
+	if time_elapsed < 3.0:
 		_process_intro_spin_phase(delta)
-	elif time_elapsed < 19.0:
-		_process_challenge_phase(delta)
-	elif time_elapsed < 24.0:
-		_process_celebration_phase(delta)
+	elif time_elapsed < 18.0:
+		if not result_displayed:
+			_process_challenge_phase(delta)
+		else:
+			_process_result_phase(delta)
 	elif time_elapsed < TOTAL_ROUND_TIME:
-		_process_finale_phase(delta)
+		_process_result_phase(delta)
 	else:
 		_on_level_timer_complete()
 
@@ -139,19 +144,18 @@ func _process(delta: float) -> void:
 		carnival_canvas.queue_redraw()
 
 # ------------------------------------------------------------------------------
-# PHASE 1: INTRO & SPIN (0.0 to 4.0s)
+# PHASE 1: INTRO & SPIN (0.0 to 3.0s)
 # ------------------------------------------------------------------------------
 func _process_intro_spin_phase(delta: float) -> void:
 	current_phase = Phase.INTRO_SPIN
 	
-	# If player hasn't spun after 0.8s, auto-spin so spin completes smoothly by 3.8s
-	if not is_spinning and time_elapsed >= 0.8 and target_slice_idx == 0 and wheel_angle == 0.0:
+	# If player hasn't spun after 0.5s, auto-spin so spin completes smoothly by 2.9s
+	if not is_spinning and time_elapsed >= 0.5 and target_slice_idx == 0 and wheel_angle == 0.0:
 		_start_wheel_spin()
 
 	if is_spinning:
 		spin_time_elapsed += delta
 		var t := clampf(spin_time_elapsed / spin_duration, 0.0, 1.0)
-		# Smooth cubic ease out
 		var ease_t := 1.0 - pow(1.0 - t, 3.0)
 		wheel_angle = lerpf(0.0, target_angle, ease_t)
 		if wheel_disc:
@@ -174,45 +178,48 @@ func _process_intro_spin_phase(delta: float) -> void:
 			_on_wheel_stopped()
 
 # ------------------------------------------------------------------------------
-# PHASE 2: 15-SECOND CHALLENGE / REWARD PHASE (4.0 to 19.0s)
+# PHASE 2: 15-SECOND CHALLENGE PHASE (3.0 to 18.0s)
 # ------------------------------------------------------------------------------
 func _process_challenge_phase(_delta: float) -> void:
 	if current_phase != Phase.CHALLENGE_PHASE:
 		current_phase = Phase.CHALLENGE_PHASE
 		_activate_outcome_ui()
 
-	var phase_remaining := maxf(0.0, 19.0 - time_elapsed)
+	var phase_remaining := maxf(0.0, 18.0 - time_elapsed)
 	countdown_label.text = "⏳ Challenge Phase: %.1f seconds remaining" % phase_remaining
 	
-	# Gentle animation on outcome icon
 	if outcome_icon:
 		var pulse := 1.0 + sin(time_elapsed * 4.0) * 0.05
 		outcome_icon.scale = Vector2(pulse, pulse)
 
 # ------------------------------------------------------------------------------
-# PHASE 3: CELEBRATION PHASE (19.0 to 24.0s)
+# PHASE 3: RESULT PHASE (18.0 to 20.0s or immediate on early completion)
 # ------------------------------------------------------------------------------
-func _process_celebration_phase(_delta: float) -> void:
-	if current_phase != Phase.CELEBRATION_PHASE:
-		current_phase = Phase.CELEBRATION_PHASE
-		_trigger_celebration_effects()
+func _show_final_result(success: bool) -> void:
+	if result_displayed:
+		return
+	result_displayed = true
+	challenge_success = success
+	current_phase = Phase.RESULT_PHASE
+	event_overlay.visible = true
+	
+	if success:
+		event_title.text = "CHALLENGE SUCCESSFULLY COMPLETED! ✨"
+		event_desc.text = "Spectacular moves! Your victory is recorded in the Scrapbook!"
+		AudioManager.play_sfx("combo")
+		hud.set_instruction("✨ CHALLENGE SUCCESSFULLY COMPLETED! ✨")
+	else:
+		event_title.text = "YOU TRIED YOUR BEST! KEEP WIGGLING! 💗"
+		event_desc.text = "Great effort! Wonderful energy! Off to Surprise Wonderland!"
+		AudioManager.play_sfx("chime")
+		hud.set_instruction("YOU TRIED YOUR BEST! KEEP WIGGLING! 💗")
 
-	var phase_remaining := maxf(0.0, 24.0 - time_elapsed)
-	countdown_label.text = "✨ Result Celebration: %.1f seconds" % phase_remaining
-
-# ------------------------------------------------------------------------------
-# PHASE 4: GRAND FINALE (24.0 to 30.0s)
-# ------------------------------------------------------------------------------
-func _process_finale_phase(_delta: float) -> void:
-	if current_phase != Phase.FINALE_PHASE:
-		current_phase = Phase.FINALE_PHASE
-		AudioManager.play_sfx("legend_fanfare")
-		event_title.text = "🎡 CARNIVAL VICTORY! 🏆"
-		event_desc.text = "All 5 levels conquered! You are a carnival superstar!"
-		hud.set_instruction("Grand Carnival Finale! Concluding 30s round... 🏆")
-
-	var secs_left := int(TOTAL_ROUND_TIME - time_elapsed) + 1
-	countdown_label.text = "🌟 Concluding session in %d seconds..." % max(1, secs_left)
+func _process_result_phase(_delta: float) -> void:
+	if not result_displayed:
+		_show_final_result(challenge_success)
+		
+	var time_left := maxf(0.0, TOTAL_ROUND_TIME - time_elapsed)
+	countdown_label.text = "🌟 Off to Surprise Wonderland in %.1f seconds..." % time_left
 
 # ------------------------------------------------------------------------------
 # WHEEL INTERACTION & SPIN TRIGGER
@@ -325,6 +332,7 @@ func _on_hand_detected(cursor_pos: Vector2, swipe: String, waving: bool, _wave_s
 		pose_feedback_timer = 0.8
 		AudioManager.play_sfx("boing")
 		hud.set_instruction("✨ Wiggle Attack recognized! Hands moving fast! Keep wiggling!")
+		_show_final_result(true)
 		return
 
 	if is_spinning or current_phase != Phase.INTRO_SPIN:
@@ -357,6 +365,7 @@ func _on_face_detected(expr: String, _scores: Dictionary, _eye_sec: float) -> vo
 		pose_feedback_timer = 0.8
 		AudioManager.play_sfx("boing")
 		hud.set_instruction("😂 Silly face recognized: %s! Fantastic expression!" % expr.to_upper())
+		_show_final_result(true)
 
 func _on_pose_detected(gest: String, lean: String, _amt: float, hr: bool, ae: bool, sq: bool, cd: bool) -> void:
 	if current_phase != Phase.CHALLENGE_PHASE or pose_feedback_timer > 0.0:
@@ -366,36 +375,43 @@ func _on_pose_detected(gest: String, lean: String, _amt: float, hr: bool, ae: bo
 		pose_feedback_timer = 0.8
 		AudioManager.play_sfx("quack")
 		hud.set_instruction("🐔 Great chicken dance flapping! Keep wiggling!")
+		_show_final_result(true)
 	elif active_challenge_name == "robot_dance" and (ae or hr or gest in ["arms_extended", "hero_pose"]):
 		pose_feedback_timer = 0.8
 		AudioManager.play_sfx("boing")
 		hud.set_instruction("🤖 Stiff robot moves recognized! Beep boop!")
+		_show_final_result(true)
 	elif active_challenge_name == "funny_actions":
 		if hr:
 			pose_feedback_timer = 0.8
 			AudioManager.play_sfx("combo")
 			hud.set_instruction("🙌 Hands Up! Pose held high!")
+			_show_final_result(true)
 		elif lean != "neutral":
 			pose_feedback_timer = 0.8
 			AudioManager.play_sfx("quack")
 			hud.set_instruction("🐧 Penguin Waddle from side to side recognized!")
+			_show_final_result(true)
 		elif sq or gest != "neutral":
 			pose_feedback_timer = 0.8
 			AudioManager.play_sfx("boing")
 			hud.set_instruction("😂 Silly carnival action recognized! Wahaha!")
+			_show_final_result(true)
 
 func _on_level_timer_complete() -> void:
 	if level_finished:
 		return
 	level_finished = true
-	event_overlay.visible = false
 	
-	hud.set_instruction("TIME'S UP! 🎡 Carnival Conquered! Off to Surprise Wonderland! 🏆")
+	if not result_displayed:
+		_show_final_result(challenge_success)
+	
+	hud.set_instruction("TIME'S UP! 🎡 Off to Surprise Wonderland! 🏆")
 	AudioManager.play_sfx("combo")
 	
 	GameManager.level5_wheel_completed = true
 	var tw := create_tween()
-	tw.tween_interval(2.5)
+	tw.tween_interval(2.0)
 	tw.tween_callback(func():
 		GameManager.complete_level(5)
 		GameManager.load_secret_ending(true)

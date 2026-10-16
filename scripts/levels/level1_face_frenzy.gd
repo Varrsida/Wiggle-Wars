@@ -23,7 +23,12 @@ var tulip_tex: Texture2D = preload("res://assets/sprites/tulip_flower.png")
 @onready var obj_sleepy_label: Label = $LevelUI/ObjectivePanel/Margin/VBox/SleepyObj
 @onready var obj_surprised_label: Label = $LevelUI/ObjectivePanel/Margin/VBox/SurprisedObj
 @onready var obj_counter_label: Label = $LevelUI/ObjectivePanel/Margin/VBox/Header
-@onready var victory_panel: PanelContainer = $LevelUI/VictoryPanel
+@onready var victory_overlay: CanvasLayer = get_node_or_null("VictoryOverlay")
+@onready var victory_score_label: Label = get_node_or_null("VictoryOverlay/Card/Margin/VBox/ScoreLabel")
+@onready var victory_continue_btn: Button = get_node_or_null("VictoryOverlay/Card/Margin/VBox/ContinueBtn")
+@onready var defeat_overlay: CanvasLayer = get_node_or_null("DefeatOverlay")
+@onready var defeat_score_label: Label = get_node_or_null("DefeatOverlay/Card/Margin/VBox/ScoreLabel")
+@onready var defeat_wheel_btn: Button = get_node_or_null("DefeatOverlay/Card/Margin/VBox/WheelBtn")
 
 var completed_actions: Dictionary = {
 	"smile": false,
@@ -33,8 +38,8 @@ var completed_actions: Dictionary = {
 	"surprised": false
 }
 
-# 45-Second Level Timer
-var time_remaining: float = 45.0
+# 30-Second Level Timer
+var time_remaining: float = 30.0
 var level_finished: bool = false
 var time_elapsed: float = 0.0
 
@@ -51,11 +56,21 @@ var mushroom_data: Array[Dictionary] = []
 var tree_data: Array[Dictionary] = []
 
 func _ready() -> void:
-	hud.setup_hud("Level 2: Face Frenzy 🌸", "Make silly faces: Smile, Open Mouth, Raise Brows, Sleepy & Surprised!")
+	time_remaining = 30.0
+	GameManager.level3_faces_completed = 0
+	
+	hud.setup_hud("Level 3: Face Frenzy 🌸", "Make silly faces: Smile, Open Mouth, Raise Brows, Sleepy & Surprised!")
 	hud.set_timer(time_remaining)
 	
-	if victory_panel:
-		victory_panel.visible = false
+	if victory_overlay:
+		victory_overlay.visible = false
+	if defeat_overlay:
+		defeat_overlay.visible = false
+		
+	if victory_continue_btn:
+		victory_continue_btn.pressed.connect(_on_victory_continue_pressed)
+	if defeat_wheel_btn:
+		defeat_wheel_btn.pressed.connect(_on_defeat_wheel_pressed)
 	
 	GestureListener.face_detected.connect(_on_face_detected)
 	
@@ -67,7 +82,7 @@ func _ready() -> void:
 	
 	AudioManager.play_music_procedural("garden")
 	AudioManager.play_voice_file("res://assets/audio/lumi_level1.wav",
-		"Welcome to the Magical Expression Garden! Show me your brightest smiles and silly faces for the next 45 seconds!", 6.0)
+		"Welcome to the Magical Expression Garden! Show me your brightest smiles and silly faces for the next 30 seconds!", 5.5)
 
 func _init_world_elements() -> void:
 	# 1. Distant fairytale trees
@@ -355,9 +370,11 @@ func _update_objective_ui() -> void:
 		obj_surprised_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.9))
 
 	obj_counter_label.text = "EXPRESSION DISCOVERY (%d / 5)" % done_count
+	if done_count >= 5 and not level_finished:
+		_on_level_timer_complete()
 
 # ------------------------------------------------------------------------------
-# EXACT 60-SECOND TIMER COMPLETION
+# EXACT 30-SECOND TIMER COMPLETION
 # ------------------------------------------------------------------------------
 func _on_level_timer_complete() -> void:
 	if level_finished:
@@ -369,32 +386,46 @@ func _on_level_timer_complete() -> void:
 		if completed_actions.get(act, false):
 			done_count += 1
 			
+	GameManager.level3_faces_completed = done_count
+	
 	if done_count >= 5:
 		hud.set_instruction("FIVE FOR FIVE! YOU'RE A GESTURE STAR! 🌸✨")
 		AudioManager.play_sfx("legend_fanfare")
 		
-		if victory_panel:
-			victory_panel.visible = true
-			var tw_v := create_tween()
-			tw_v.tween_property(victory_panel, "scale", Vector2(1.08, 1.08), 0.25)
-			tw_v.tween_property(victory_panel, "scale", Vector2.ONE, 0.25)
+		if victory_overlay:
+			victory_overlay.visible = true
+			if victory_score_label:
+				victory_score_label.text = "Facial Actions Completed: 5 / 5 ✔"
 			
 		var tw := create_tween()
-		tw.tween_interval(2.8)
+		tw.tween_interval(3.0)
 		tw.tween_callback(func():
-			GameManager.complete_level(2)
-			get_tree().change_scene_to_file("res://scenes/level3_waddle_wars.tscn")
+			GameManager.complete_level(3)
+			GameManager.load_secret_ending(true)
 		)
 	else:
 		hud.set_instruction("TIME'S UP! (%d / 5 Expressions). Spin the Lucky Wheel for redemption! 🎡" % done_count)
 		AudioManager.play_sfx("boing")
 		
+		if defeat_overlay:
+			defeat_overlay.visible = true
+			if defeat_score_label:
+				defeat_score_label.text = "Actions Completed: %d / 5" % done_count
+				
 		var tw := create_tween()
-		tw.tween_interval(2.6)
+		tw.tween_interval(3.2)
 		tw.tween_callback(func():
-			# Loss route: launch Lucky Wheel!
 			get_tree().change_scene_to_file("res://scenes/level5_lucky_wheel.tscn")
 		)
+
+func _on_victory_continue_pressed() -> void:
+	AudioManager.play_sfx("chime")
+	GameManager.complete_level(3)
+	GameManager.load_secret_ending(true)
+
+func _on_defeat_wheel_pressed() -> void:
+	AudioManager.play_sfx("chime")
+	get_tree().change_scene_to_file("res://scenes/level5_lucky_wheel.tscn")
 
 # ------------------------------------------------------------------------------
 # ILLUSTRATED GARDEN ENVIRONMENT DRAWING

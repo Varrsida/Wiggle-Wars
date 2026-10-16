@@ -286,9 +286,9 @@ func _test_level1_five_actions() -> Dictionary:
 	var inst := packed.instantiate()
 	add_child(inst)
 	
-	# Verify 45-second timer
-	if inst.time_remaining != 45.0:
-		res["error"] = "Level 1 timer not initialized to 45.0"
+	# Verify 30-second timer
+	if inst.time_remaining != 30.0:
+		res["error"] = "Level 1 timer not initialized to 30.0"
 		inst.queue_free()
 		return res
 		
@@ -320,8 +320,8 @@ func _test_level2_fruit_spawning() -> Dictionary:
 	var inst := packed.instantiate()
 	add_child(inst)
 	
-	if inst.time_remaining != 45.0:
-		res["error"] = "Level 2 timer not initialized to 45.0"
+	if inst.time_remaining != 30.0:
+		res["error"] = "Level 2 timer not initialized to 30.0"
 		inst.queue_free()
 		return res
 		
@@ -350,8 +350,8 @@ func _test_level3_penguin_visibility() -> Dictionary:
 	var inst := packed.instantiate()
 	add_child(inst)
 	
-	if inst.time_remaining != 45.0:
-		res["error"] = "Level 3 timer not initialized to 45.0"
+	if inst.time_remaining != 30.0:
+		res["error"] = "Level 3 timer not initialized to 30.0"
 		inst.queue_free()
 		return res
 		

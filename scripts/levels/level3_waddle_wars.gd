@@ -13,6 +13,13 @@ extends Node2D
 @onready var obstacle_container: Node2D = $WorldLayer/ObstacleContainer
 @onready var snow_particles: CPUParticles2D = $WorldLayer/SnowParticles
 
+@onready var victory_overlay: CanvasLayer = get_node_or_null("VictoryOverlay")
+@onready var victory_score_label: Label = get_node_or_null("VictoryOverlay/Card/Margin/VBox/ScoreLabel")
+@onready var victory_continue_btn: Button = get_node_or_null("VictoryOverlay/Card/Margin/VBox/ContinueBtn")
+@onready var defeat_overlay: CanvasLayer = get_node_or_null("DefeatOverlay")
+@onready var defeat_score_label: Label = get_node_or_null("DefeatOverlay/Card/Margin/VBox/ScoreLabel")
+@onready var defeat_wheel_btn: Button = get_node_or_null("DefeatOverlay/Card/Margin/VBox/WheelBtn")
+
 var penguin_x: float = 640.0
 var penguin_y: float = 560.0
 var base_y: float = 560.0
@@ -24,8 +31,8 @@ var fish_collected: int = 0
 var time_elapsed: float = 0.0
 var next_event_time: float = 7.0
 
-# 45-Second Level Timer
-var time_remaining: float = 45.0
+# 30-Second Level Timer
+var time_remaining: float = 30.0
 var level_finished: bool = false
 
 var last_pose_time: float = 0.0
@@ -53,12 +60,25 @@ var waddle_sound_timer: float = 0.0
 func _ready() -> void:
 	crystals_collected = 0
 	fish_collected = 0
+	time_remaining = 30.0
+	GameManager.level2_crystals_collected = 0
+	GameManager.level2_fish_collected = 0
 	GameManager.level3_crystals_collected = 0
 	GameManager.level3_fish_collected = 0
 	
-	hud.setup_hud("Level 3: Waddle Wars 🐧", "Move your body: Lean left/right, jump, squat & slide to guide the baby penguin!")
+	hud.setup_hud("Level 2: Waddle Wars 🐧", "Move your body: Lean left/right, jump, squat & slide to guide the baby penguin!")
 	hud.set_timer(time_remaining)
 	
+	if victory_overlay:
+		victory_overlay.visible = false
+	if defeat_overlay:
+		defeat_overlay.visible = false
+		
+	if victory_continue_btn:
+		victory_continue_btn.pressed.connect(_on_victory_continue_pressed)
+	if defeat_wheel_btn:
+		defeat_wheel_btn.pressed.connect(_on_defeat_wheel_pressed)
+		
 	GestureListener.pose_detected.connect(_on_pose_detected)
 	GestureListener.hand_detected.connect(_on_hand_detected)
 	
@@ -69,7 +89,7 @@ func _ready() -> void:
 	_spawn_initial_items()
 	
 	AudioManager.play_voice_file("res://assets/audio/lumi_level3.wav",
-		"Meet our adorable baby penguin! Lean, jump, and slide to help our cute little hero for the next 45 seconds!", 6.0)
+		"Meet our adorable baby penguin! Lean, jump, and slide to help our cute little hero for the next 30 seconds!", 5.5)
 
 func _init_arctic_scenery() -> void:
 	# Jagged icy mountain silhouettes
@@ -378,6 +398,8 @@ func _trigger_victory() -> void:
 		return
 	level_finished = true
 	
+	GameManager.level2_crystals_collected = crystals_collected
+	GameManager.level2_fish_collected = fish_collected
 	GameManager.level3_crystals_collected = crystals_collected
 	GameManager.level3_fish_collected = fish_collected
 	var total_items := crystals_collected + fish_collected
@@ -385,6 +407,11 @@ func _trigger_victory() -> void:
 	hud.set_instruction("FISH, CRYSTALS AND GLORY — YOU DID IT! 🐧💎 (Total: %d) 🏆" % total_items)
 	AudioManager.play_sfx("legend_fanfare")
 	
+	if victory_overlay:
+		victory_overlay.visible = true
+		if victory_score_label:
+			victory_score_label.text = "Crystals: %d | Fish: %d | Total: %d 🐧✨" % [crystals_collected, fish_collected, total_items]
+			
 	# Glittering icy sparkle celebration
 	for i in range(28):
 		var spk := Node2D.new()
@@ -394,13 +421,15 @@ func _trigger_victory() -> void:
 		tw_s.tween_property(spk, "scale", Vector2(2.0, 2.0), 0.4)
 		tw_s.parallel().tween_property(spk, "modulate:a", 0.0, 0.8)
 		tw_s.tween_callback(spk.queue_free)
-	
-	var tw := create_tween()
-	tw.tween_interval(2.8)
-	tw.tween_callback(func():
-		GameManager.complete_level(3)
-		GameManager.load_secret_ending(true)
-	)
+
+func _on_victory_continue_pressed() -> void:
+	AudioManager.play_sfx("chime")
+	GameManager.complete_level(2)
+	GameManager.load_level(3) # Transitions to Level 3: Face Frenzy!
+
+func _on_defeat_wheel_pressed() -> void:
+	AudioManager.play_sfx("chime")
+	get_tree().change_scene_to_file("res://scenes/level5_lucky_wheel.tscn")
 
 func _on_level_timer_complete() -> void:
 	if level_finished:
@@ -411,15 +440,22 @@ func _on_level_timer_complete() -> void:
 		_trigger_victory()
 	else:
 		level_finished = true
+		GameManager.level2_crystals_collected = crystals_collected
+		GameManager.level2_fish_collected = fish_collected
 		GameManager.level3_crystals_collected = crystals_collected
 		GameManager.level3_fish_collected = fish_collected
-		hud.set_instruction("TIME'S UP! 🐧 Collectibles: %d / 10. Let's find magic in Surprise Wonderland! 🌈" % total_items)
+		hud.set_instruction("TIME'S UP! 🐧 Collectibles: %d / 10. Let's spin the Lucky Wheel! 🎡" % total_items)
 		AudioManager.play_sfx("chime")
 		
+		if defeat_overlay:
+			defeat_overlay.visible = true
+			if defeat_score_label:
+				defeat_score_label.text = "Collectibles: %d / 10 🐧" % total_items
+				
 		var tw := create_tween()
-		tw.tween_interval(2.6)
+		tw.tween_interval(3.2)
 		tw.tween_callback(func():
-			GameManager.load_secret_ending(true)
+			get_tree().change_scene_to_file("res://scenes/level5_lucky_wheel.tscn")
 		)
 
 # ------------------------------------------------------------------------------

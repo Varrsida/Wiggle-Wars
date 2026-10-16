@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/levels/level5_lucky_wheel.gd" id="1_l5"]
 [ext_resource type="PackedScene" path="res://scenes/hud.tscn" id="2_hud"]
-[ext_resource type="Texture2D" path="res://assets/backgrounds/level5_carnival_pink_bg.png" id="3_carnival_bg"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/lantern_festival_bg.png" id="3_carnival_bg"]
 [ext_resource type="Texture2D" path="res://assets/sprites/lucky_wheel_disc.png" id="4_wheel_disc"]
 [ext_resource type="Texture2D" path="res://assets/sprites/lucky_wheel_pointer.png" id="5_wheel_pointer"]
 

@@ -5,6 +5,8 @@
 [ext_resource type="Texture2D" path="res://assets/backgrounds/level2_lake_bg.png" id="3_lake_bg"]
 
 [ext_resource type="Texture2D" path="res://assets/characters/shinchan_hero.png" id="4_shinchan"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/japanese_house_bg.png" id="5_japanese_house_bg"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/lantern_festival_bg.png" id="6_lantern_festival_bg"]
 
 [sub_resource type="Curve" id="Curve_blade"]
 _data = [Vector2(0, 0.2), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]
@@ -71,6 +73,24 @@ end_cap_mode = 2
 layer = 10
 visible = false
 
+[node name="VictoryBG" type="TextureRect" parent="VictoryOverlay"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("5_japanese_house_bg")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="DimOverlay" type="ColorRect" parent="VictoryOverlay"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.12, 0.05, 0.22, 0.55)
+
 [node name="Card" type="PanelContainer" parent="VictoryOverlay"]
 anchors_preset = 8
 anchor_left = 0.5
@@ -119,7 +139,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.92, 1, 1)
 theme_override_font_sizes/font_size = 15
 text = "Incredible hand swipes and juicy tropical slicing!
-Your ninja blade mastery unlocked the next realm!"
+Your ninja blade mastery unlocked Level 2!"
 horizontal_alignment = 1
 autowrap_mode = 2
 
@@ -129,11 +149,29 @@ layout_mode = 2
 size_flags_horizontal = 4
 theme_override_colors/font_color = Color(1, 1, 0.3, 1)
 theme_override_font_sizes/font_size = 18
-text = "Continue to Face Frenzy 🌸 ➔"
+text = "Continue to Waddle Wars 🐧 ➔"
 
 [node name="BombLossOverlay" type="CanvasLayer" parent="."]
 layer = 12
 visible = false
+
+[node name="LanternBG" type="TextureRect" parent="BombLossOverlay"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("6_lantern_festival_bg")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="DimOverlay" type="ColorRect" parent="BombLossOverlay"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.1, 0.05, 0.15, 0.5)
 
 [node name="Card" type="PanelContainer" parent="BombLossOverlay"]
 anchors_preset = 8
@@ -176,12 +214,19 @@ alignment = 1
 
 [node name="Title" type="Label" parent="BombLossOverlay/Card/Margin/HBox/VBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.4, 0.5, 1)
-theme_override_colors/font_shadow_color = Color(0.2, 0, 0, 0.9)
+theme_override_colors/font_color = Color(1, 0.9, 0.3, 1)
+theme_override_colors/font_shadow_color = Color(0.8, 0.1, 0.4, 0.9)
 theme_override_constants/shadow_offset_x = 2
 theme_override_constants/shadow_offset_y = 2
-theme_override_font_sizes/font_size = 22
-text = "🎆 PLAYFUL BOMB BURST! 💥"
+theme_override_font_sizes/font_size = 24
+text = "REPEAT WHAT SHIN CHAN SAYS! 🗣️✨"
+horizontal_alignment = 1
+
+[node name="CountdownLabel" type="Label" parent="BombLossOverlay/Card/Margin/HBox/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 1, 0.6, 1)
+theme_override_font_sizes/font_size = 16
+text = "⏳ Time Remaining: 25.0s"
 horizontal_alignment = 1
 
 [node name="DialogueBubble" type="PanelContainer" parent="BombLossOverlay/Card/Margin/HBox/VBox"]

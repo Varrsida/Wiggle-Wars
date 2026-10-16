@@ -15,26 +15,37 @@ var level5_wheel_completed: bool = false
 var level5_results_acknowledged: bool = false
 var secret_ending_unlocked: bool = false
 
-# Level Statistics (displayed on results screens)
-var level2_fruits_sliced: int = 0
-var level3_crystals_collected: int = 0
-var level3_fish_collected: int = 0
+# Level Statistics (displayed on results screens and scrapbook)
+var level1_fruit_score: int = 0
+var level1_fruits_sliced: int = 0
+var level2_fruits_sliced: int:
+	get: return level1_fruits_sliced
+	set(v): level1_fruits_sliced = v
+var level2_crystals_collected: int = 0
+var level2_fish_collected: int = 0
+var level3_crystals_collected: int:
+	get: return level2_crystals_collected
+	set(v): level2_crystals_collected = v
+var level3_fish_collected: int:
+	get: return level2_fish_collected
+	set(v): level2_fish_collected = v
+var level3_faces_completed: int = 0
 
 var is_paused: bool = false
 var level_start_time: float = 0.0
 
 const LEVEL_SCENES: Dictionary = {
 	1: "res://scenes/level2_fruit_ninja.tscn",
-	2: "res://scenes/level1_face_frenzy.tscn",
-	3: "res://scenes/level3_waddle_wars.tscn",
+	2: "res://scenes/level3_waddle_wars.tscn",
+	3: "res://scenes/level1_face_frenzy.tscn",
 	4: "res://scenes/level4_copycat_chaos.tscn",
 	5: "res://scenes/level5_lucky_wheel.tscn"
 }
 
 const LEVEL_NAMES: Dictionary = {
 	1: "Level 1: Fruit Ninja 🍉",
-	2: "Level 2: Face Frenzy 🌸",
-	3: "Level 3: Waddle Wars 🐧",
+	2: "Level 2: Waddle Wars 🐧",
+	3: "Level 3: Face Frenzy 🌸",
 	4: "Level 4: Copycat Chaos 🎭",
 	5: "Level 5: Lucky Chaos Wheel 🎡"
 }
@@ -67,9 +78,11 @@ func reset_game_state() -> void:
 	level5_wheel_completed = false
 	level5_results_acknowledged = false
 	secret_ending_unlocked = false
-	level2_fruits_sliced = 0
-	level3_crystals_collected = 0
-	level3_fish_collected = 0
+	level1_fruit_score = 0
+	level1_fruits_sliced = 0
+	level2_crystals_collected = 0
+	level2_fish_collected = 0
+	level3_faces_completed = 0
 	is_paused = false
 	game_reset.emit()
 	print("[GameManager] Full game state reset.")

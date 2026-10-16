@@ -11,25 +11,25 @@ extends Control
 
 const MEMORIES: Dictionary = {
 	1: {
-		"title": "Garden Memory 🌸",
-		"level": "Level 1: Face Frenzy",
-		"memory": "Remember that radiant smile that bloomed pink tulips across the sunny grass? Pure sunshine!",
-		"card_tex": "res://assets/sprites/memory_card_1.png",
-		"tag": "GARDEN MEMORY"
-	},
-	2: {
-		"title": "Lake Memory 🍉",
-		"level": "Level 2: Fruit Ninja",
+		"title": "Juicy Slicer 🍉",
+		"level": "Level 1: Fruit Ninja",
 		"memory": "Lightning-fast air slices sent tropical fruits flying and juicy splashes soaring across the lake!",
 		"card_tex": "res://assets/sprites/memory_card_2.png",
 		"tag": "LAKE MEMORY"
 	},
-	3: {
-		"title": "Arctic Memory 🐧",
-		"level": "Level 3: Waddle Wars",
+	2: {
+		"title": "Arctic Waddler 🐧",
+		"level": "Level 2: Waddle Wars",
 		"memory": "Leaning, jumping, and belly-sliding together with our adorable baby penguin in his cozy beanie!",
 		"card_tex": "res://assets/sprites/memory_card_3.png",
 		"tag": "ARCTIC MEMORY"
+	},
+	3: {
+		"title": "Garden Bloom 🌸",
+		"level": "Level 3: Face Frenzy",
+		"memory": "Remember that radiant smile that bloomed pink tulips across the sunny grass? Pure sunshine!",
+		"card_tex": "res://assets/sprites/memory_card_1.png",
+		"tag": "GARDEN MEMORY"
 	},
 	4: {
 		"title": "Theater Memory 🎭",
@@ -55,7 +55,7 @@ const MEMORIES: Dictionary = {
 	7: {
 		"title": "Legend Memory 🏆",
 		"level": "Master Realm",
-		"memory": "All 5 realms conquered! A true Wiggle Wars legend and superstar of boundless joy!",
+		"memory": "All realms conquered! A true Wiggle Wars legend and superstar of boundless joy!",
 		"card_tex": "res://assets/sprites/memory_card_7.png",
 		"tag": "LEGEND MEMORY"
 	}
@@ -140,9 +140,24 @@ func _build_card(mem_num: int) -> Control:
 func _update_header() -> void:
 	if progress_label:
 		var count := StickerManager.get_unlocked_count()
-		progress_label.text = "MEMORIES UNLOCKED: %d / 7  🌈" % count
+		var base_text := "MEMORIES UNLOCKED: %d / 7  🌈" % count
 		if count >= 5:
-			progress_label.text = "ALL REALMS CONQUERED! WIGGLE WARS LEGEND! 🏆✨"
+			base_text = "ALL REALMS CONQUERED! WIGGLE WARS LEGEND! 🏆✨"
+		
+		var stats_parts: Array[String] = []
+		if GameManager.level1_fruits_sliced > 0:
+			stats_parts.append("🍉 Fruits: %d" % GameManager.level1_fruits_sliced)
+		if GameManager.level2_crystals_collected > 0 or GameManager.level2_fish_collected > 0:
+			stats_parts.append("💎 Crystals: %d  🐟 Fish: %d" % [GameManager.level2_crystals_collected, GameManager.level2_fish_collected])
+		if GameManager.level3_faces_completed > 0:
+			stats_parts.append("🌸 Expressions: %d" % GameManager.level3_faces_completed)
+		if GameManager.level5_wheel_outcome != "":
+			stats_parts.append("🎡 Wheel: %s" % GameManager.level5_wheel_outcome)
+			
+		if stats_parts.size() > 0:
+			progress_label.text = base_text + "\n" + " • ".join(stats_parts)
+		else:
+			progress_label.text = base_text
 
 func _on_back_pressed() -> void:
 	AudioManager.play_sfx("boing")

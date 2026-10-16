@@ -404,58 +404,15 @@ func _draw_wonderland() -> void:
 		var p_col: Color = pt["color"]
 		wonderland_canvas.draw_ellipse(p_draw_pos, 7.0 * sc, 4.0 * sc, p_col)
 
-	# C. Upgraded Magical Atmospheric Rainbow Archway & Storybook Portal
-	var center := Vector2(640.0, 420.0)
-	var door_glow: float = absf(sin(time_elapsed * 2.5)) * 0.25 + 0.75
-	
-	# Atmospheric starlight glow behind the rainbow matching the night sky
-	wonderland_canvas.draw_arc(center, 230.0, PI, TAU, 48, Color(0.9, 0.8, 1.0, 0.15 * door_glow), 120.0)
-	
-	var magical_rainbow := [
-		Color(1.0, 0.45, 0.65), # Rose Pink
-		Color(1.0, 0.70, 0.45), # Peach Coral
-		Color(1.0, 0.95, 0.55), # Warm Buttercream
-		Color(0.55, 0.95, 0.75), # Mint Green
-		Color(0.45, 0.85, 1.00), # Sky Blue
-		Color(0.65, 0.55, 1.00), # Indigo Lavender
-		Color(0.85, 0.55, 0.95)  # Violet
-	]
-	for i in range(magical_rainbow.size()):
-		var r := 175.0 + i * 16.0
-		var c: Color = magical_rainbow[i] * door_glow
-		c.a = 0.85
-		wonderland_canvas.draw_arc(center, r, PI, TAU, 54, c, 13.0)
-		
-	# Sparkles dancing along the rainbow arch
-	for i in range(12):
-		var spk_a := PI + (float(i) / 11.0) * PI
-		var spk_r := 175.0 + fmod(time_elapsed * 20.0 + i * 22.0, 96.0)
-		var spk_pos := center + Vector2(cos(spk_a), sin(spk_a)) * spk_r
-		var spk_alpha := absf(sin(time_elapsed * 4.0 + i)) * 0.85
-		wonderland_canvas.draw_circle(spk_pos, 2.5, Color(1.0, 1.0, 0.85, spk_alpha))
-
-	# Storybook Magical Portal Entrance (Replacing plain rectangular door)
-	# 1. Swirling Starlight Vortex inside portal arch
-	wonderland_canvas.draw_arc(center + Vector2(0, -10), 85.0, PI, TAU, 32, Color(0.12, 0.08, 0.28, 0.92), 170.0)
-	for s in range(8):
-		var v_rad := 20.0 + s * 8.5
-		var v_rot := time_elapsed * (1.5 - s * 0.1)
-		var v_col := Color.from_hsv(fmod(float(s)/8.0 + time_elapsed * 0.1, 1.0), 0.65, 1.0, 0.45 * door_glow)
-		wonderland_canvas.draw_arc(center + Vector2(0, -40), v_rad, v_rot, v_rot + PI * 1.4, 20, v_col, 3.5)
-
-	# 2. Ornate Storybook Arch Pillars and Moldings
-	# Left pillar
-	wonderland_canvas.draw_rect(Rect2(center.x - 96, center.y - 70, 18, 120), Color(0.95, 0.85, 0.45, 0.95))
-	wonderland_canvas.draw_rect(Rect2(center.x - 92, center.y - 66, 10, 112), Color(1.0, 0.96, 0.75, 0.95))
-	# Right pillar
-	wonderland_canvas.draw_rect(Rect2(center.x + 78, center.y - 70, 18, 120), Color(0.95, 0.85, 0.45, 0.95))
-	wonderland_canvas.draw_rect(Rect2(center.x + 82, center.y - 66, 10, 112), Color(1.0, 0.96, 0.75, 0.95))
-	# Storybook Archway Header
-	wonderland_canvas.draw_arc(center + Vector2(0, -70), 88.0, PI, TAU, 36, Color(0.95, 0.85, 0.45, 0.95), 14.0)
-	wonderland_canvas.draw_arc(center + Vector2(0, -70), 88.0, PI, TAU, 36, Color(1.0, 0.98, 0.82, 0.95), 6.0)
-	# Golden star rune keystone at apex
-	wonderland_canvas.draw_circle(center + Vector2(0, -160), 12.0, Color(1.0, 0.92, 0.45))
-	wonderland_canvas.draw_circle(center + Vector2(0, -160), 7.0, Color.WHITE)
+	# C. Glowing Stars & Subtle Magical Particles (Doors and portals removed per design)
+	for i in range(20):
+		var star_x := 80.0 + i * 58.0 + sin(time_elapsed * 1.5 + i) * 15.0
+		var star_y := 140.0 + cos(time_elapsed * 1.2 + i * 2.0) * 80.0
+		var star_pulse := absf(sin(time_elapsed * 3.0 + i * 0.7)) * 0.8 + 0.2
+		var star_col := Color(1.0, 0.95, 0.75, 0.65 * star_pulse)
+		wonderland_canvas.draw_circle(Vector2(star_x, star_y), 3.0 * star_pulse, star_col)
+		wonderland_canvas.draw_line(Vector2(star_x - 6, star_y), Vector2(star_x + 6, star_y), star_col, 1.2)
+		wonderland_canvas.draw_line(Vector2(star_x, star_y - 6), Vector2(star_x, star_y + 6), star_col, 1.2)
 
 	# D. Characters Gathered Together in Surprise Wonderland
 	if current_state >= CinematicState.SCENE_B_EVERYONE_APPEARS:
@@ -479,8 +436,8 @@ func _draw_wonderland() -> void:
 		if angel_tex:
 			var angel_pos := Vector2(640.0, 310.0 + sin(time_elapsed * 2.8) * 14.0)
 			# Soft celestial golden halo aura
-			wonderland_canvas.draw_circle(angel_pos + Vector2(0, -40), 90.0, Color(1.0, 0.95, 0.75, 0.25 * door_glow))
-			wonderland_canvas.draw_circle(angel_pos + Vector2(0, -40), 60.0, Color(1.0, 0.85, 0.95, 0.20 * door_glow))
+			wonderland_canvas.draw_circle(angel_pos + Vector2(0, -40), 90.0, Color(1.0, 0.95, 0.75, 0.25))
+			wonderland_canvas.draw_circle(angel_pos + Vector2(0, -40), 60.0, Color(1.0, 0.85, 0.95, 0.20))
 			var a_w := 240.0
 			var a_h := a_w * (float(angel_tex.get_height()) / float(angel_tex.get_width()))
 			wonderland_canvas.draw_texture_rect(angel_tex, Rect2(angel_pos.x - a_w * 0.5, angel_pos.y - a_h * 0.5, a_w, a_h), false)

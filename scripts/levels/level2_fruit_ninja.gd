@@ -21,6 +21,13 @@ extends Node2D
 @onready var speech_status_label: Label = get_node_or_null("BombLossOverlay/Card/Margin/HBox/VBox/StatusLabel")
 @onready var speak_btn: Button = get_node_or_null("BombLossOverlay/Card/Margin/HBox/VBox/SpeakBtn")
 @onready var wonderland_btn: Button = get_node_or_null("BombLossOverlay/Card/Margin/HBox/VBox/WonderlandBtn")
+@onready var shinchan_timer_label: Label = get_node_or_null("BombLossOverlay/Card/Margin/HBox/VBox/CountdownLabel")
+
+var bombs_cut: int = 0
+const MAX_BOMBS_BEFORE_LOSS: int = 4
+var shinchan_challenge_active: bool = false
+var shinchan_timer: float = 25.0
+var shinchan_concluded: bool = false
 
 class ActiveFruit:
 	var id: int
@@ -43,8 +50,8 @@ var fruits: Array[ActiveFruit] = []
 var next_fruit_id: int = 1
 var spawn_timer: float = 0.0
 
-# 45-Second Level Timer
-var time_remaining: float = 45.0
+# 30-Second Level Timer
+var time_remaining: float = 30.0
 var level_finished: bool = false
 var time_elapsed: float = 0.0
 
@@ -62,6 +69,13 @@ var floating_neon_fruits: Array[Dictionary] = []
 
 func _ready() -> void:
 	fruits_sliced = 0
+	bombs_cut = 0
+	time_remaining = 30.0
+	shinchan_challenge_active = false
+	shinchan_concluded = false
+	shinchan_timer = 25.0
+	GameManager.level1_fruits_sliced = 0
+	GameManager.level1_fruit_score = 0
 	GameManager.level2_fruits_sliced = 0
 	
 	hud.setup_hud("Level 1: Fruit Ninja 🍉", "Swipe your hand through the air to slice the flying tropical fruit!")
@@ -89,7 +103,7 @@ func _ready() -> void:
 	_init_tropical_scenery()
 	
 	AudioManager.play_voice_file("res://assets/audio/lumi_level2.wav",
-		"Time for Fruit Ninja! Swipe your hands through the air to slice the flying tropical fruit for the next 45 seconds!", 6.0)
+		"Time for Fruit Ninja! Swipe your hands through the air to slice the flying tropical fruit for the next 30 seconds!", 5.5)
 
 func _init_tropical_scenery() -> void:
 	
@@ -125,7 +139,15 @@ func _init_tropical_scenery() -> void:
 func _process(delta: float) -> void:
 	time_elapsed += delta
 	
-	# 60-Second Level Timer
+	# Shin Chan Challenge 25s Countdown
+	if shinchan_challenge_active and not shinchan_concluded:
+		shinchan_timer = maxf(0.0, shinchan_timer - delta)
+		if shinchan_timer_label:
+			shinchan_timer_label.text = "⏳ Time Remaining: %.1f seconds" % shinchan_timer
+		if shinchan_timer <= 0.0:
+			_conclude_shinchan_challenge(false)
+
+	# 30-Second Level Timer
 	if not level_finished:
 		time_remaining = maxf(0.0, time_remaining - delta)
 		hud.set_timer(time_remaining)
@@ -313,9 +335,18 @@ func _handle_fruit_sliced(f: ActiveFruit, slice_origin: Vector2) -> void:
 	f.half_r_vel = f.velocity * 0.5 + norm * 260.0 + Vector2(0, -120)
 	
 	if f.type == "bomb":
-		_trigger_bomb_loss(f.pos)
+		bombs_cut += 1
+		_spawn_playful_firecracker(f.pos)
+		AudioManager.play_sfx("bomb")
+		if bombs_cut < MAX_BOMBS_BEFORE_LOSS:
+			hud.set_instruction("💥 BOMB CUT! (%d/4) Careful! 4th bomb causes loss!" % bombs_cut)
+		else:
+			hud.set_instruction("💥 4TH BOMB CUT! Shinchan arrives with a challenge!")
+			_trigger_bomb_loss(f.pos)
 	else:
 		fruits_sliced += 1
+		GameManager.level1_fruits_sliced = fruits_sliced
+		GameManager.level1_fruit_score = fruits_sliced * 10
 		GameManager.level2_fruits_sliced = fruits_sliced
 		match f.type:
 			"watermelon_fountain":
@@ -341,19 +372,26 @@ func _handle_fruit_sliced(f: ActiveFruit, slice_origin: Vector2) -> void:
 
 func _trigger_bomb_loss(pos: Vector2) -> void:
 	level_finished = true
+	shinchan_challenge_active = true
+	shinchan_timer = 25.0
+	shinchan_concluded = false
 	_spawn_playful_firecracker(pos)
 	AudioManager.play_sfx("bomb")
-	hud.set_instruction("💥 PLAYFUL BOMB BURST! Shinchan arrives with a challenge!")
+	hud.set_instruction("💥 4TH BOMB HIT! Shinchan arrives with a challenge!")
 	
 	if bomb_loss_overlay:
 		bomb_loss_overlay.visible = true
+	if shinchan_timer_label:
+		shinchan_timer_label.text = "⏳ Time Remaining: 25.0s"
 		
-	# Play supplied Shin Chan Chutti Paiyan dialogue
-	AudioManager.play_voice_file("res://assets/audio/shinchan_chuti_paiyan.mp3",
-		"Shinchan: 'Chutti Paiyan!'", 4.0)
+	# Play authentic Tamil dialogue
+	AudioManager.play_voice_file("res://assets/audio/Shin Chan Chuti Paiyan Dialogue.mp3",
+		"Shinchan: 'Chutti Paiyan!'", 5.0)
 		
+	if bubble_text:
+		bubble_text.text = "Shinchan: \"Chutti Paiyan! Repeat after me into your microphone! 🗣️\""
 	if speech_status_label:
-		speech_status_label.text = "Listening to microphone... Repeat after Shinchan: 'Chutti Paiyan!'"
+		speech_status_label.text = "Listening to microphone... Say 'Chutti Paiyan'!"
 		
 	# Request genuine microphone speech recognition
 	GestureListener.request_speech_recognition()
@@ -363,18 +401,44 @@ func _on_speech_status(_status: String, message: String) -> void:
 		speech_status_label.text = message
 
 func _on_speech_result(success: bool, text: String, _audio_file: String) -> void:
+	if shinchan_concluded:
+		return
 	if success and text != "":
-		if speech_status_label:
-			speech_status_label.text = "Shinchan heard: '%s'! ✔ Speech repeated!" % text
-		if bubble_text:
-			bubble_text.text = "Shinchan: \"Wahaha! Spot on! You said '%s'! Let's head to Surprise Wonderland! 🌈\"" % text
-		AudioManager.play_sfx("combo")
+		var t_lower := text.to_lower()
+		if "chut" in t_lower or "pai" in t_lower or "pay" in t_lower or "shin" in t_lower or "cutie" in t_lower:
+			if speech_status_label:
+				speech_status_label.text = "Shinchan heard: '%s'! ✔ Dialogue matched!" % text
+			_conclude_shinchan_challenge(true)
+		else:
+			if speech_status_label:
+				speech_status_label.text = "Heard '%s'. Repeat 'Chutti Paiyan'!" % text
+			AudioManager.play_sfx("chime")
 	else:
 		if speech_status_label:
-			speech_status_label.text = "Microphone checked! Shinchan laughs: 'Good effort, buddy!'"
+			speech_status_label.text = "Microphone ready. Tap 'Speak to Shinchan' to repeat!"
+
+func _conclude_shinchan_challenge(won: bool) -> void:
+	if shinchan_concluded:
+		return
+	shinchan_concluded = true
+	if won:
 		if bubble_text:
-			bubble_text.text = "Shinchan: \"Hehehe, close enough! Off to Surprise Wonderland we go! 🌈\""
+			bubble_text.text = "YOU WON THE CHALLENGE! 🎉\nShinchan: \"Wahaha! Spot on! Off to Surprise Wonderland! 🌈\""
+		if speech_status_label:
+			speech_status_label.text = "Challenge Won! Transitioning to Surprise Wonderland..."
+		AudioManager.play_sfx("combo")
+	else:
+		if bubble_text:
+			bubble_text.text = "GREAT TRY! EVERY ATTEMPT MAKES YOU BETTER! 💗\nShinchan: \"Keep smiling and shining! Off to Wonderland! 🌸\""
+		if speech_status_label:
+			speech_status_label.text = "Great attempt! Transitioning to Surprise Wonderland..."
 		AudioManager.play_sfx("chime")
+		
+	var tw := create_tween()
+	tw.tween_interval(3.0)
+	tw.tween_callback(func():
+		GameManager.load_secret_ending(true)
+	)
 
 func _on_speak_btn_pressed() -> void:
 	if speech_status_label:
@@ -389,7 +453,7 @@ func _on_wonderland_pressed() -> void:
 func _on_victory_continue_pressed() -> void:
 	AudioManager.play_sfx("chime")
 	GameManager.complete_level(1)
-	GameManager.load_level(2) # Proceeds to Face Frenzy!
+	GameManager.load_level(2) # Proceeds to Level 2: Waddle Wars!
 
 func _spawn_playful_firecracker(pos: Vector2) -> void:
 	AudioManager.play_sfx("combo")

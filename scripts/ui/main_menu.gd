@@ -58,7 +58,7 @@ func _process(delta: float) -> void:
 
 func _on_play_pressed() -> void:
 	AudioManager.play_sfx("chime")
-	get_tree().change_scene_to_file("res://scenes/webcam_setup.tscn")
+	GameManager.start_game()
 
 func _on_setup_pressed() -> void:
 	AudioManager.play_sfx("chime")
