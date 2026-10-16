@@ -34,7 +34,7 @@ func _ready() -> void:
 	GestureListener.frame_received.connect(_on_frame_received)
 	
 	_update_cam_status(GestureListener.is_tracker_connected)
-	set_timer(60.0)
+	set_timer(45.0)
 
 func _resolve_nodes() -> void:
 	if _nodes_resolved:

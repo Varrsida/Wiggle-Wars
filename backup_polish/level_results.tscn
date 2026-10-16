@@ -1,0 +1,138 @@
+[gd_scene format=3 uid="uid://ww_level_results_01"]
+
+[ext_resource type="Script" path="res://scripts/ui/level_results.gd" id="1_results"]
+
+[sub_resource type="Gradient" id="Gradient_results_bg"]
+colors = PackedColorArray(0.08, 0.05, 0.18, 0.96, 0.2, 0.08, 0.28, 0.98)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_results_bg"]
+gradient = SubResource("Gradient_results_bg")
+fill_from = Vector2(0.5, 0)
+fill_to = Vector2(0.5, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card"]
+bg_color = Color(0.12, 0.09, 0.26, 0.98)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 0.85, 0.25, 1)
+corner_radius_top_left = 22
+corner_radius_top_right = 22
+corner_radius_bottom_right = 22
+corner_radius_bottom_left = 22
+shadow_color = Color(1, 0.8, 0.25, 0.35)
+shadow_size = 16
+
+[node name="LevelResults" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_results")
+
+[node name="Background" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = SubResource("GradientTexture2D_results_bg")
+
+[node name="ConfettiParticles" type="CPUParticles2D" parent="."]
+position = Vector2(640, -10)
+amount = 45
+lifetime = 3.5
+emission_shape = 3
+emission_rect_extents = Vector2(640, 10)
+gravity = Vector2(0, 120)
+initial_velocity_min = 30.0
+initial_velocity_max = 80.0
+angular_velocity_min = -120.0
+angular_velocity_max = 120.0
+scale_amount_min = 3.0
+scale_amount_max = 7.0
+color = Color(1, 0.88, 0.25, 0.85)
+
+[node name="Panel" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -360.0
+offset_top = -250.0
+offset_right = 360.0
+offset_bottom = 250.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="VBox" type="VBoxContainer" parent="Panel"]
+layout_mode = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="TitleLabel" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.88, 0.25, 1)
+theme_override_colors/font_shadow_color = Color(0.9, 0.2, 0.6, 0.8)
+theme_override_constants/shadow_offset_x = 3
+theme_override_constants/shadow_offset_y = 3
+theme_override_font_sizes/font_size = 30
+text = "LEVEL COMPLETE! 🎉"
+horizontal_alignment = 1
+
+[node name="StatusLabel" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 1, 0.55, 1)
+theme_override_font_sizes/font_size = 24
+text = "⏱️ 60 SECONDS CONQUERED! 🏆"
+horizontal_alignment = 1
+
+[node name="BadgeLabel" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.35, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 19
+text = "🌟 PARTY PERFORMANCE: SPECTACULAR!"
+horizontal_alignment = 1
+
+[node name="DetailsLabel" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.92, 0.98, 1)
+theme_override_font_sizes/font_size = 16
+text = "Challenges completed..."
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="Buttons" type="HBoxContainer" parent="Panel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="NextBtn" type="Button" parent="Panel/VBox/Buttons"]
+custom_minimum_size = Vector2(240, 48)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 0.3, 1)
+theme_override_font_sizes/font_size = 18
+text = "Next Level ➔"
+
+[node name="ReplayBtn" type="Button" parent="Panel/VBox/Buttons"]
+custom_minimum_size = Vector2(160, 48)
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Replay 🔄"
+
+[node name="MenuBtn" type="Button" parent="Panel/VBox/Buttons"]
+custom_minimum_size = Vector2(150, 48)
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "Main Menu 🏠"
+
+[connection signal="pressed" from="Panel/VBox/Buttons/NextBtn" to="." method="_on_next_pressed"]
+[connection signal="pressed" from="Panel/VBox/Buttons/ReplayBtn" to="." method="_on_replay_pressed"]
+[connection signal="pressed" from="Panel/VBox/Buttons/MenuBtn" to="." method="_on_menu_pressed"]

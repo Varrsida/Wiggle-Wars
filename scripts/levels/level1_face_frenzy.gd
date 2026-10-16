@@ -33,8 +33,8 @@ var completed_actions: Dictionary = {
 	"surprised": false
 }
 
-# 60-Second Level Timer
-var time_remaining: float = 60.0
+# 45-Second Level Timer
+var time_remaining: float = 45.0
 var level_finished: bool = false
 var time_elapsed: float = 0.0
 
@@ -51,7 +51,7 @@ var mushroom_data: Array[Dictionary] = []
 var tree_data: Array[Dictionary] = []
 
 func _ready() -> void:
-	hud.setup_hud("Level 1: Face Frenzy 🌸", "Make silly faces: Smile, Open Mouth, Raise Brows, Sleepy & Surprised!")
+	hud.setup_hud("Level 2: Face Frenzy 🌸", "Make silly faces: Smile, Open Mouth, Raise Brows, Sleepy & Surprised!")
 	hud.set_timer(time_remaining)
 	
 	if victory_panel:
@@ -67,7 +67,7 @@ func _ready() -> void:
 	
 	AudioManager.play_music_procedural("garden")
 	AudioManager.play_voice_file("res://assets/audio/lumi_level1.wav",
-		"Welcome to the Magical Expression Garden! Show me your brightest smiles and silly faces for the next 60 seconds!", 6.0)
+		"Welcome to the Magical Expression Garden! Show me your brightest smiles and silly faces for the next 45 seconds!", 6.0)
 
 func _init_world_elements() -> void:
 	# 1. Distant fairytale trees
@@ -157,7 +157,7 @@ func _update_environment_physics(delta: float) -> void:
 		b["pos"].x = b["base_pos"].x + sin(time_elapsed * spd + s) * 70.0 + cos(time_elapsed * 0.5 + s) * 30.0
 		b["pos"].y = b["base_pos"].y + cos(time_elapsed * spd * 1.3 + s) * 40.0 + sin(time_elapsed * 0.8) * 20.0
 
-func _on_face_detected(expr: String, _scores: Dictionary, _eye_closed_sec: float) -> void:
+func _on_face_detected(expr: String, scores: Dictionary, eye_closed_sec: float) -> void:
 	if level_finished:
 		return
 	
@@ -165,20 +165,23 @@ func _on_face_detected(expr: String, _scores: Dictionary, _eye_closed_sec: float
 	if (now - last_action_time) < ACTION_COOLDOWN:
 		return
 	
-	match expr:
-		"smile":
-			_trigger_smile(now)
-		"mouth_open":
-			_trigger_bubbles(now)
-		"eyebrows":
-			_trigger_star_burst(now)
-		"sleepy":
-			_trigger_sleepy_garden(now)
-		"surprised", "head_tilt":
-			_trigger_wind_gust(now)
+	var s_smile: float = scores.get("smile", 0.0)
+	var s_mouth: float = scores.get("mouth_open", 0.0)
+	var s_brow: float = scores.get("eyebrows", 0.0)
+	
+	if expr == "smile" or s_smile >= 0.30:
+		_trigger_smile(now)
+	elif expr == "mouth_open" or s_mouth >= 0.28:
+		_trigger_bubbles(now)
+	elif expr == "eyebrows" or s_brow >= 0.26:
+		_trigger_star_burst(now)
+	elif expr == "sleepy" or eye_closed_sec >= 0.8:
+		_trigger_sleepy_garden(now)
+	elif expr in ["surprised", "head_tilt"] or (s_mouth >= 0.24 and s_brow >= 0.24):
+		_trigger_wind_gust(now)
 
 # ------------------------------------------------------------------------------
-# 5 INDEPENDENT ACTION HANDLERS — WORK REPEATEDLY THROUGHOUT THE 60 SECONDS
+# 5 INDEPENDENT ACTION HANDLERS — WORK REPEATEDLY THROUGHOUT THE 45 SECONDS
 # ------------------------------------------------------------------------------
 func _trigger_smile(now: float) -> void:
 	last_action_time = now
@@ -206,10 +209,10 @@ func _spawn_blooming_tulip(pos: Vector2) -> void:
 	var tulip := Sprite2D.new()
 	tulip.texture = tulip_tex
 	tulip.centered = true
-	tulip.offset = Vector2(0, -60) # Origin at stem base
+	tulip.offset = Vector2(0, -145) # Origin at stem base
 	tulip.position = pos
-	tulip.scale = Vector2(0.06, 0.06) # Starts as tiny bud
-	tulip.modulate = Color(1.0, 0.95, 0.98, 0.95)
+	tulip.scale = Vector2(0.04, 0.04) # Starts as tiny bud
+	tulip.modulate = Color(1.0, 1.0, 1.0, 0.95)
 	
 	if tulip_container:
 		tulip_container.add_child(tulip)
@@ -217,13 +220,13 @@ func _spawn_blooming_tulip(pos: Vector2) -> void:
 		$WorldLayer.add_child(tulip)
 		
 	var tw := create_tween()
-	# 1. Bud appearance & stem upward growth + petal opening into full bloom
-	var target_scale := Vector2(randf_range(0.60, 0.78), randf_range(0.60, 0.78))
+	# 1. Bud appearance & stem upward growth into clean sticker bloom
+	var target_scale := Vector2(randf_range(0.38, 0.48), randf_range(0.38, 0.48))
 	tw.tween_property(tulip, "scale", target_scale, 0.65).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tw.parallel().tween_property(tulip, "position:y", pos.y - 18.0, 0.65)
-	tw.parallel().tween_property(tulip, "rotation", randf_range(-0.08, 0.08), 0.65)
+	tw.parallel().tween_property(tulip, "position:y", pos.y - 14.0, 0.65)
+	tw.parallel().tween_property(tulip, "rotation", randf_range(-0.06, 0.06), 0.65)
 	# 2. Gentle sway and sparkle hold
-	tw.tween_property(tulip, "rotation", randf_range(-0.05, 0.05), 1.8)
+	tw.tween_property(tulip, "rotation", randf_range(-0.04, 0.04), 2.0)
 	# 3. Soft fade out
 	tw.tween_property(tulip, "modulate:a", 0.0, 0.75)
 	tw.tween_callback(tulip.queue_free)
@@ -234,24 +237,28 @@ func _trigger_bubbles(now: float) -> void:
 	AudioManager.play_sfx("bubble_pop")
 	hud.set_instruction("Big Open Mouth! Colorful iridescent bubbles soaring! 🫧")
 	
-	# Spawn 12 colorful soaring bubbles
-	for i in range(12):
-		_spawn_bubble(Vector2(640.0 + randf_range(-260, 260), 540.0 + randf_range(-20, 20)))
+	# Spawn 7 varied-size iridescent bubbles
+	var sizes := [16.0, 22.0, 28.0, 34.0, 40.0, 24.0, 30.0]
+	for rad in sizes:
+		_spawn_bubble(Vector2(640.0 + randf_range(-220, 220), 540.0 + randf_range(-20, 20)), rad)
 		
 	_update_objective_ui()
 
-func _spawn_bubble(start_pos: Vector2) -> void:
+func _spawn_bubble(start_pos: Vector2, radius_val: float) -> void:
 	var bubble := Node2D.new()
 	bubble.position = start_pos
-	bubble.set_meta("radius", randf_range(18.0, 38.0))
-	bubble.set_meta("color", Color.from_hsv(randf(), 0.75, 1.0, 0.85))
+	bubble.set_meta("radius", radius_val)
+	# Harmonious iridescent pastel palette
+	var hues := [0.55, 0.60, 0.75, 0.85, 0.92]
+	var pick_hue: float = hues[randi() % hues.size()]
+	bubble.set_meta("color", Color.from_hsv(pick_hue, 0.65, 0.98, 0.85))
 	bubble_container.add_child(bubble)
 	
 	var tw := create_tween()
-	var dest := start_pos + Vector2(randf_range(-160, 160), -randf_range(340, 560))
-	tw.tween_property(bubble, "position", dest, randf_range(1.6, 2.5))
-	tw.parallel().tween_property(bubble, "scale", Vector2(1.5, 1.5), 2.0)
-	tw.parallel().tween_property(bubble, "modulate:a", 0.0, 2.3)
+	var dest := start_pos + Vector2(randf_range(-140, 140), -randf_range(360, 580))
+	tw.tween_property(bubble, "position", dest, randf_range(1.8, 2.8)).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(bubble, "scale", Vector2(1.25, 1.25), 2.2)
+	tw.parallel().tween_property(bubble, "modulate:a", 0.0, 2.5)
 	tw.tween_callback(bubble.queue_free)
 
 func _trigger_star_burst(now: float) -> void:
@@ -357,21 +364,37 @@ func _on_level_timer_complete() -> void:
 		return
 	level_finished = true
 	
-	hud.set_instruction("TIME'S UP! 🌸 Magical Expression Garden Conquered! 🏆")
-	AudioManager.play_sfx("combo")
-	
-	if victory_panel:
-		victory_panel.visible = true
-		var tw_v := create_tween()
-		tw_v.tween_property(victory_panel, "scale", Vector2(1.08, 1.08), 0.25)
-		tw_v.tween_property(victory_panel, "scale", Vector2.ONE, 0.25)
+	var done_count := 0
+	for act in ["smile", "mouth_open", "eyebrows", "sleepy", "surprised"]:
+		if completed_actions.get(act, false):
+			done_count += 1
+			
+	if done_count >= 5:
+		hud.set_instruction("FIVE FOR FIVE! YOU'RE A GESTURE STAR! 🌸✨")
+		AudioManager.play_sfx("legend_fanfare")
 		
-	var tw := create_tween()
-	tw.tween_interval(2.5)
-	tw.tween_callback(func():
-		GameManager.complete_level(1)
-		get_tree().change_scene_to_file("res://scenes/level_results.tscn")
-	)
+		if victory_panel:
+			victory_panel.visible = true
+			var tw_v := create_tween()
+			tw_v.tween_property(victory_panel, "scale", Vector2(1.08, 1.08), 0.25)
+			tw_v.tween_property(victory_panel, "scale", Vector2.ONE, 0.25)
+			
+		var tw := create_tween()
+		tw.tween_interval(2.8)
+		tw.tween_callback(func():
+			GameManager.complete_level(2)
+			get_tree().change_scene_to_file("res://scenes/level3_waddle_wars.tscn")
+		)
+	else:
+		hud.set_instruction("TIME'S UP! (%d / 5 Expressions). Spin the Lucky Wheel for redemption! 🎡" % done_count)
+		AudioManager.play_sfx("boing")
+		
+		var tw := create_tween()
+		tw.tween_interval(2.6)
+		tw.tween_callback(func():
+			# Loss route: launch Lucky Wheel!
+			get_tree().change_scene_to_file("res://scenes/level5_lucky_wheel.tscn")
+		)
 
 # ------------------------------------------------------------------------------
 # ILLUSTRATED GARDEN ENVIRONMENT DRAWING
@@ -425,22 +448,52 @@ func _draw_garden_canvas() -> void:
 			garden_canvas.draw_circle(fp, 28.0 * b_sc, Color(1.0, 0.55, 0.8, 0.3))
 			garden_canvas.draw_circle(fp, 14.0 * b_sc, Color(1.0, 0.92, 0.45, 0.5))
 
-	# G. Fluttering Butterflies
+	# G. Fluttering Pinterest-Style Illustrated Butterflies
 	for b in butterfly_data:
 		var bp: Vector2 = b["pos"]
-		var wing_flap := absf(sin(time_elapsed * 9.0 + b["seed"])) * 11.0
-		var b_col := Color.from_hsv(b["hue"], 0.8, 1.0, 0.92)
-		garden_canvas.draw_ellipse(bp - Vector2(9, 0), 12.0, wing_flap, b_col)
-		garden_canvas.draw_ellipse(bp + Vector2(9, 0), 12.0, wing_flap, b_col.lightened(0.2))
-		garden_canvas.draw_circle(bp, 3.2, Color(0.12, 0.12, 0.2))
+		var flap := clampf(absf(sin(time_elapsed * 8.5 + b["seed"])), 0.18, 1.0)
+		var b_col: Color = Color.from_hsv(b["hue"], 0.75, 1.0, 0.92)
+		var b_light: Color = b_col.lightened(0.35)
+		var b_dark: Color = b_col.darkened(0.3)
 
-	# H. Active Bubbles
+		# Left Forewing & Hindwing
+		garden_canvas.draw_ellipse(bp + Vector2(-11 * flap, -7), 13.0 * flap, 17.0, b_col)
+		garden_canvas.draw_ellipse(bp + Vector2(-11 * flap, -7), 8.0 * flap, 11.0, b_light)
+		garden_canvas.draw_circle(bp + Vector2(-10 * flap, -8), 2.5 * flap, b_dark)
+		garden_canvas.draw_ellipse(bp + Vector2(-8 * flap, 7), 9.0 * flap, 11.0, b_col.lightened(0.15))
+		garden_canvas.draw_circle(bp + Vector2(-8 * flap, 7), 2.0 * flap, Color.WHITE)
+
+		# Right Forewing & Hindwing
+		garden_canvas.draw_ellipse(bp + Vector2(11 * flap, -7), 13.0 * flap, 17.0, b_col)
+		garden_canvas.draw_ellipse(bp + Vector2(11 * flap, -7), 8.0 * flap, 11.0, b_light)
+		garden_canvas.draw_circle(bp + Vector2(10 * flap, -8), 2.5 * flap, b_dark)
+		garden_canvas.draw_ellipse(bp + Vector2(8 * flap, 7), 9.0 * flap, 11.0, b_col.lightened(0.15))
+		garden_canvas.draw_circle(bp + Vector2(8 * flap, 7), 2.0 * flap, Color.WHITE)
+
+		# Slender Body & Head
+		garden_canvas.draw_line(bp + Vector2(0, -9), bp + Vector2(0, 10), Color(0.18, 0.12, 0.22), 3.0)
+		garden_canvas.draw_circle(bp + Vector2(0, -9), 2.8, Color(0.18, 0.12, 0.22))
+		# Antennae with tiny tips
+		garden_canvas.draw_line(bp + Vector2(0, -9), bp + Vector2(-4, -16), Color(0.2, 0.15, 0.25), 1.2)
+		garden_canvas.draw_circle(bp + Vector2(-4, -16), 1.2, b_light)
+		garden_canvas.draw_line(bp + Vector2(0, -9), bp + Vector2(4, -16), Color(0.2, 0.15, 0.25), 1.2)
+		garden_canvas.draw_circle(bp + Vector2(4, -16), 1.2, b_light)
+
+	# H. Active Iridescent Bubbles
 	for b in bubble_container.get_children():
 		var rad: float = b.get_meta("radius", 22.0)
 		var b_col: Color = b.get_meta("color", Color.CYAN)
 		var bp: Vector2 = b.position
-		garden_canvas.draw_circle(bp, rad, b_col)
-		garden_canvas.draw_circle(bp + Vector2(-rad * 0.35, -rad * 0.35), rad * 0.25, Color(1, 1, 1, 0.85))
+		# Translucent inner wash
+		garden_canvas.draw_circle(bp, rad, Color(b_col.r, b_col.g, b_col.b, 0.24))
+		# Delicate rainbow sheen rim
+		garden_canvas.draw_arc(bp, rad, 0, TAU, 28, Color(b_col.r, b_col.g, b_col.b, 0.8), 2.0)
+		# Upper curved crescent shine
+		garden_canvas.draw_arc(bp + Vector2(-rad * 0.15, -rad * 0.15), rad * 0.65, -PI * 0.85, -PI * 0.15, 14, Color(1, 1, 1, 0.85), 2.2)
+		# Lower subtle reflection
+		garden_canvas.draw_arc(bp + Vector2(rad * 0.1, rad * 0.1), rad * 0.68, PI * 0.25, PI * 0.65, 10, Color(b_col.r, b_col.g, b_col.b, 0.5), 1.5)
+		# Specular shine dot
+		garden_canvas.draw_circle(bp + Vector2(-rad * 0.42, -rad * 0.42), rad * 0.18, Color(1, 1, 1, 0.95))
 
 	# I. Active Shooting Stars
 	for s in star_container.get_children():

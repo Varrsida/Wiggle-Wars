@@ -44,26 +44,26 @@ class TrackerConfig:
     PREVIEW_HEIGHT = 240
     TARGET_FPS = 30
     
-    # Face thresholds
-    SMILE_THRESHOLD = 0.42
-    MOUTH_OPEN_THRESHOLD = 0.38
-    EYEBROW_RAISE_THRESHOLD = 0.35
-    EYE_BLINK_THRESHOLD = 0.55
-    SUSTAINED_BLINK_SECONDS = 1.0
-    SURPRISED_JAW_THRESHOLD = 0.35
-    SURPRISED_BROW_THRESHOLD = 0.30
+    # Face thresholds (tuned for natural player expressions)
+    SMILE_THRESHOLD = 0.30
+    MOUTH_OPEN_THRESHOLD = 0.28
+    EYEBROW_RAISE_THRESHOLD = 0.26
+    EYE_BLINK_THRESHOLD = 0.48
+    SUSTAINED_BLINK_SECONDS = 0.75
+    SURPRISED_JAW_THRESHOLD = 0.26
+    SURPRISED_BROW_THRESHOLD = 0.24
     
-    # Hand thresholds
-    SWIPE_MIN_DISTANCE = 0.12  # normalized distance
-    SWIPE_MAX_TIME = 0.25      # seconds
+    # Hand thresholds (tuned for natural responsive swipes and waves)
+    SWIPE_MIN_DISTANCE = 0.07  # normalized distance
+    SWIPE_MAX_TIME = 0.35      # seconds
     WAVE_MIN_PEAKS = 2
     
-    # Pose thresholds
-    LEAN_LEFT_THRESHOLD = -0.09
-    LEAN_RIGHT_THRESHOLD = 0.09
-    HANDS_RAISED_Y_MARGIN = 0.08
-    ARMS_EXTENDED_SPAN_RATIO = 1.70
-    SQUAT_DROP_THRESHOLD = 0.08
+    # Pose thresholds (tuned for responsive waddling, leaning and jumping)
+    LEAN_LEFT_THRESHOLD = -0.06
+    LEAN_RIGHT_THRESHOLD = 0.06
+    HANDS_RAISED_Y_MARGIN = 0.05
+    ARMS_EXTENDED_SPAN_RATIO = 1.60
+    SQUAT_DROP_THRESHOLD = 0.06
 
 
 DIR_PATH = os.path.dirname(os.path.abspath(__file__))

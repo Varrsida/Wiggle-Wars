@@ -20,11 +20,12 @@ var penguin_state: String = "idle" # idle, jump, slide, balance, squat, reach, w
 var state_timer: float = 0.0
 
 var crystals_collected: int = 0
+var fish_collected: int = 0
 var time_elapsed: float = 0.0
 var next_event_time: float = 7.0
 
-# 60-Second Level Timer
-var time_remaining: float = 60.0
+# 45-Second Level Timer
+var time_remaining: float = 45.0
 var level_finished: bool = false
 
 var last_pose_time: float = 0.0
@@ -47,8 +48,14 @@ var mountains: Array[PackedVector2Array] = []
 var pine_trees: Array[Dictionary] = []
 var snow_puffs: Array[Dictionary] = []
 var prev_penguin_x: float = 640.0
+var waddle_sound_timer: float = 0.0
 
 func _ready() -> void:
+	crystals_collected = 0
+	fish_collected = 0
+	GameManager.level3_crystals_collected = 0
+	GameManager.level3_fish_collected = 0
+	
 	hud.setup_hud("Level 3: Waddle Wars 🐧", "Move your body: Lean left/right, jump, squat & slide to guide the baby penguin!")
 	hud.set_timer(time_remaining)
 	
@@ -62,7 +69,7 @@ func _ready() -> void:
 	_spawn_initial_items()
 	
 	AudioManager.play_voice_file("res://assets/audio/lumi_level3.wav",
-		"Meet our adorable baby penguin! Lean, jump, and slide to help our cute little hero for the next 60 seconds!", 6.0)
+		"Meet our adorable baby penguin! Lean, jump, and slide to help our cute little hero for the next 45 seconds!", 6.0)
 
 func _init_arctic_scenery() -> void:
 	# Jagged icy mountain silhouettes
@@ -151,6 +158,13 @@ func _update_penguin_motion(delta: float) -> void:
 	# Spawn snow puffs when moving horizontally or sliding
 	var movement := absf(penguin_x - prev_penguin_x)
 	prev_penguin_x = penguin_x
+	
+	if waddle_sound_timer > 0.0:
+		waddle_sound_timer -= delta
+	elif movement > 2.0:
+		waddle_sound_timer = 0.38
+		AudioManager.play_sfx("slide")
+		
 	if movement > 1.5 or penguin_state == "slide":
 		if randf() < 0.65:
 			snow_puffs.append({
@@ -207,11 +221,24 @@ func _update_penguin_motion(delta: float) -> void:
 
 func _collect_item(it: ArcticItem) -> void:
 	it.collected = true
-	crystals_collected += 1
-	AudioManager.play_sfx("crystal")
+	_spawn_collection_sparkle(it.pos, Color(0.35, 0.95, 1.0) if it.item_type == "crystal" else Color(1.0, 0.85, 0.2))
 	
-	var label := "💎 Crystal Gathered!" if it.item_type == "crystal" else "🐟 Tasty Ice Fish Grabbed!"
-	hud.set_instruction(label + " Total: %d!" % crystals_collected)
+	if it.item_type == "crystal":
+		crystals_collected += 1
+		GameManager.level3_crystals_collected = crystals_collected
+		AudioManager.play_sfx("crystal")
+	else:
+		fish_collected += 1
+		GameManager.level3_fish_collected = fish_collected
+		AudioManager.play_sfx("fish")
+		AudioManager.play_sfx("bubble_pop")
+	
+	var total := crystals_collected + fish_collected
+	hud.set_instruction("💎 Crystals: %d | 🐟 Fish: %d | Total: %d / 10 ⭐" % [crystals_collected, fish_collected, total])
+	
+	if total >= 10 and not level_finished:
+		_trigger_victory()
+		return
 	
 	# Respawn after delay
 	var tw := create_tween()
@@ -221,23 +248,36 @@ func _collect_item(it: ArcticItem) -> void:
 		it.pos.x = randf_range(180.0, 1100.0)
 	)
 
-func _on_pose_detected(gest: String, lean: String, _lean_amt: float, hr: bool, ae: bool, sq: bool, _cd: bool) -> void:
+func _spawn_collection_sparkle(pos: Vector2, col: Color) -> void:
+	for i in range(8):
+		var spk := Node2D.new()
+		spk.position = pos
+		var vel := Vector2.from_angle(randf() * TAU) * randf_range(40.0, 120.0)
+		spk.set_meta("vel", vel)
+		spk.set_meta("color", col)
+		crystals_container.add_child(spk)
+		var tw := create_tween()
+		tw.tween_property(spk, "position", pos + vel * 0.4, 0.45)
+		tw.parallel().tween_property(spk, "scale", Vector2.ZERO, 0.45)
+		tw.tween_callback(spk.queue_free)
+
+func _on_pose_detected(gest: String, lean: String, lean_amt: float, hr: bool, ae: bool, sq: bool, _cd: bool) -> void:
 	if level_finished or penguin_state in ["wobble", "dizzy"]:
 		return
 
 	var now := Time.get_ticks_msec() / 1000.0
 
 	# 1. Lean Left
-	if lean == "lean_left" or gest == "lean_left":
-		penguin_x = clampf(penguin_x - 18.0, 150.0, 1130.0)
+	if lean == "lean_left" or gest == "lean_left" or lean_amt < -0.06:
+		penguin_x = clampf(penguin_x - 22.0, 150.0, 1130.0)
 		if (now - last_pose_time) > POSE_COOLDOWN:
 			last_pose_time = now
 			AudioManager.play_sfx("chirp")
 			hud.set_instruction("🐧 Leaning Left! Little feet waddling fast!")
 
 	# 2. Lean Right
-	elif lean == "lean_right" or gest == "lean_right":
-		penguin_x = clampf(penguin_x + 18.0, 150.0, 1130.0)
+	elif lean == "lean_right" or gest == "lean_right" or lean_amt > 0.06:
+		penguin_x = clampf(penguin_x + 22.0, 150.0, 1130.0)
 		if (now - last_pose_time) > POSE_COOLDOWN:
 			last_pose_time = now
 			AudioManager.play_sfx("chirp")
@@ -273,11 +313,16 @@ func _on_pose_detected(gest: String, lean: String, _lean_amt: float, hr: bool, a
 	elif gest == "lean_forward":
 		penguin_state = "slide"
 		state_timer = 0.85
-		penguin_x = clampf(penguin_x + 12.0, 150.0, 1130.0)
+		penguin_x = clampf(penguin_x + 16.0, 150.0, 1130.0)
 		AudioManager.play_sfx("slide")
 		hud.set_instruction("🐧 Belly Slide! Sliding across glossy ice!")
 
-func _on_hand_detected(_pos: Vector2, _swipe: String, _waving: bool, _wave_spd: float, reach_up: bool, _open: bool, _fist: bool) -> void:
+func _on_hand_detected(cursor_pos: Vector2, _swipe: String, _waving: bool, _wave_spd: float, reach_up: bool, _open: bool, _fist: bool) -> void:
+	if level_finished or penguin_state in ["jump", "slide", "wobble"]:
+		return
+	if reach_up or cursor_pos.y < 0.22:
+		penguin_state = "reach"
+		state_timer = 0.55
 	if reach_up and penguin_state != "reach" and not level_finished:
 		penguin_state = "reach"
 		state_timer = 0.65
@@ -328,20 +373,54 @@ func _trigger_dizzy_penguin() -> void:
 	AudioManager.play_sfx("chirp")
 	hud.set_instruction("💫 Dizzy Penguin! Stars circling cute little head!")
 
-func _on_level_timer_complete() -> void:
+func _trigger_victory() -> void:
 	if level_finished:
 		return
 	level_finished = true
 	
-	hud.set_instruction("TIME'S UP! 🐧 Penguin Hero Victory! 60s Conquered! 🏆")
+	GameManager.level3_crystals_collected = crystals_collected
+	GameManager.level3_fish_collected = fish_collected
+	var total_items := crystals_collected + fish_collected
+	
+	hud.set_instruction("FISH, CRYSTALS AND GLORY — YOU DID IT! 🐧💎 (Total: %d) 🏆" % total_items)
 	AudioManager.play_sfx("legend_fanfare")
 	
+	# Glittering icy sparkle celebration
+	for i in range(28):
+		var spk := Node2D.new()
+		spk.position = Vector2(randf_range(120, 1160), randf_range(160, 580))
+		crystals_container.add_child(spk)
+		var tw_s := create_tween()
+		tw_s.tween_property(spk, "scale", Vector2(2.0, 2.0), 0.4)
+		tw_s.parallel().tween_property(spk, "modulate:a", 0.0, 0.8)
+		tw_s.tween_callback(spk.queue_free)
+	
 	var tw := create_tween()
-	tw.tween_interval(2.5)
+	tw.tween_interval(2.8)
 	tw.tween_callback(func():
 		GameManager.complete_level(3)
-		get_tree().change_scene_to_file("res://scenes/level_results.tscn")
+		GameManager.load_secret_ending(true)
 	)
+
+func _on_level_timer_complete() -> void:
+	if level_finished:
+		return
+	
+	var total_items := crystals_collected + fish_collected
+	if total_items >= 10:
+		_trigger_victory()
+	else:
+		level_finished = true
+		GameManager.level3_crystals_collected = crystals_collected
+		GameManager.level3_fish_collected = fish_collected
+		hud.set_instruction("TIME'S UP! 🐧 Collectibles: %d / 10. Let's find magic in Surprise Wonderland! 🌈" % total_items)
+		AudioManager.play_sfx("chime")
+		
+		var tw := create_tween()
+		tw.tween_interval(2.6)
+		tw.tween_callback(func():
+			GameManager.load_secret_ending(true)
+		)
 
 # ------------------------------------------------------------------------------
 # ILLUSTRATED ARCTIC ENVIRONMENT & PENGUIN HERO DRAWING
@@ -361,24 +440,74 @@ func _draw_arctic_canvas() -> void:
 		for i in range(pts.size() - 1):
 			arctic_canvas.draw_line(pts[i], pts[i+1], a_col, 28.0)
 
-	# B. Active Floating Crystals & Ice Fish
+	# B. Active Floating Crystals & Ice Fish (Upgraded Faceted Crystals & Detailed Arctic Fish)
 	for it in active_items:
 		if not it.collected:
 			var ip := it.pos
 			if it.item_type == "crystal":
-				arctic_canvas.draw_polygon(PackedVector2Array([
-					ip + Vector2(0, -22), ip + Vector2(15, -6),
-					ip + Vector2(0, 22), ip + Vector2(-15, -6)
-				]), PackedColorArray([Color(0.35, 0.85, 1.0, 0.95)]))
-				arctic_canvas.draw_circle(ip, 5.0, Color.WHITE)
+				var float_y := sin(time_elapsed * 3.5 + it.id * 1.5) * 6.0
+				var cp := ip + Vector2(0, float_y)
+				# 1. Soft pulsing glow halos
+				var glow_pulse := 0.20 + sin(time_elapsed * 4.0 + it.id) * 0.08
+				arctic_canvas.draw_circle(cp, 30.0, Color(0.25, 0.85, 1.0, glow_pulse))
+				arctic_canvas.draw_circle(cp, 20.0, Color(0.70, 0.40, 1.0, glow_pulse * 0.8))
+				# 2. Faceted 3D diamond geometry
+				var top_v := cp + Vector2(0, -25)
+				var left_v := cp + Vector2(-16, -3)
+				var right_v := cp + Vector2(16, -3)
+				var bot_v := cp + Vector2(0, 25)
+				var center_v := cp + Vector2(0, -1)
+				# Top-Left facet (bright cyan highlight)
+				arctic_canvas.draw_polygon(PackedVector2Array([top_v, left_v, center_v]), PackedColorArray([Color(0.72, 0.94, 1.0, 0.96)]))
+				# Top-Right facet (shimmering white/cyan)
+				arctic_canvas.draw_polygon(PackedVector2Array([top_v, right_v, center_v]), PackedColorArray([Color(0.90, 0.98, 1.0, 0.96)]))
+				# Bottom-Left facet (deep rich azure)
+				arctic_canvas.draw_polygon(PackedVector2Array([bot_v, left_v, center_v]), PackedColorArray([Color(0.20, 0.72, 0.98, 0.94)]))
+				# Bottom-Right facet (magical amethyst/purple shimmer)
+				arctic_canvas.draw_polygon(PackedVector2Array([bot_v, right_v, center_v]), PackedColorArray([Color(0.58, 0.38, 0.95, 0.92)]))
+				# Facet edge seams
+				var seam_col := Color(1.0, 1.0, 1.0, 0.85)
+				arctic_canvas.draw_line(top_v, bot_v, seam_col, 1.5)
+				arctic_canvas.draw_line(left_v, right_v, seam_col, 1.5)
+				arctic_canvas.draw_line(top_v, left_v, seam_col, 1.5)
+				arctic_canvas.draw_line(top_v, right_v, seam_col, 1.5)
+				arctic_canvas.draw_line(bot_v, left_v, seam_col, 1.5)
+				arctic_canvas.draw_line(bot_v, right_v, seam_col, 1.5)
+				# Core twinkle sparkle
+				arctic_canvas.draw_circle(cp + Vector2(-2, -6), 3.2, Color.WHITE)
+				arctic_canvas.draw_line(cp + Vector2(-7, -6), cp + Vector2(3, -6), Color(1, 1, 1, 0.8), 1.2)
+				arctic_canvas.draw_line(cp + Vector2(-2, -11), cp + Vector2(-2, -1), Color(1, 1, 1, 0.8), 1.2)
 			else:
-				# Ice Fish
-				arctic_canvas.draw_ellipse(ip, 22.0, 12.0, Color(0.4, 0.75, 1.0))
-				# Tail
+				# Detailed Arctic Ice Fish
+				var swim_y := sin(time_elapsed * 4.2 + it.id * 2.0) * 4.5
+				var fp := ip + Vector2(0, swim_y)
+				var tail_wag := sin(time_elapsed * 8.5 + it.id) * 3.5
+				# Soft swimming aura
+				arctic_canvas.draw_circle(fp, 26.0, Color(0.35, 0.80, 1.0, 0.16))
+				# Dorsal fin
 				arctic_canvas.draw_polygon(PackedVector2Array([
-					ip + Vector2(18, 0), ip + Vector2(30, -10), ip + Vector2(30, 10)
-				]), PackedColorArray([Color(0.3, 0.65, 0.95)]))
-				arctic_canvas.draw_circle(ip + Vector2(-12, -3), 2.5, Color.BLACK)
+					fp + Vector2(-4, -10), fp + Vector2(6, -20), fp + Vector2(12, -9)
+				]), PackedColorArray([Color(0.28, 0.65, 0.95, 0.85)]))
+				# Forked caudal tail fin with animated wag
+				arctic_canvas.draw_polygon(PackedVector2Array([
+					fp + Vector2(16, 0),
+					fp + Vector2(32, -13 + tail_wag),
+					fp + Vector2(25, 0 + tail_wag * 0.4),
+					fp + Vector2(32, 13 + tail_wag)
+				]), PackedColorArray([Color(0.32, 0.70, 0.96, 0.95)]))
+				# Fish body (silver-blue back with shimmering belly)
+				arctic_canvas.draw_ellipse(fp, 24.0, 13.0, Color(0.28, 0.62, 0.95))
+				arctic_canvas.draw_ellipse(fp + Vector2(0, 3), 20.0, 8.0, Color(0.85, 0.95, 1.0, 0.85))
+				# Coral/salmon pectoral fin
+				arctic_canvas.draw_polygon(PackedVector2Array([
+					fp + Vector2(-2, 3), fp + Vector2(7, 13), fp + Vector2(13, 5)
+				]), PackedColorArray([Color(1.0, 0.55, 0.45, 0.90)]))
+				# Curved gill arch
+				arctic_canvas.draw_arc(fp + Vector2(-6, 0), 8.0, -1.2, 1.2, 8, Color(0.18, 0.45, 0.78, 0.75), 1.8)
+				# Expressive eye
+				arctic_canvas.draw_circle(fp + Vector2(-14, -3), 4.5, Color.WHITE)
+				arctic_canvas.draw_circle(fp + Vector2(-15, -3), 2.5, Color(0.08, 0.12, 0.18))
+				arctic_canvas.draw_circle(fp + Vector2(-16, -4.2), 1.2, Color.WHITE)
 
 	# C. Rolling Snowball or Parade Penguins Obstacles
 	for obs in obstacle_container.get_children():

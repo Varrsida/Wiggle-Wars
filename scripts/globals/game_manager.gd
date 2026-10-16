@@ -15,20 +15,25 @@ var level5_wheel_completed: bool = false
 var level5_results_acknowledged: bool = false
 var secret_ending_unlocked: bool = false
 
+# Level Statistics (displayed on results screens)
+var level2_fruits_sliced: int = 0
+var level3_crystals_collected: int = 0
+var level3_fish_collected: int = 0
+
 var is_paused: bool = false
 var level_start_time: float = 0.0
 
 const LEVEL_SCENES: Dictionary = {
-	1: "res://scenes/level1_face_frenzy.tscn",
-	2: "res://scenes/level2_fruit_ninja.tscn",
+	1: "res://scenes/level2_fruit_ninja.tscn",
+	2: "res://scenes/level1_face_frenzy.tscn",
 	3: "res://scenes/level3_waddle_wars.tscn",
 	4: "res://scenes/level4_copycat_chaos.tscn",
 	5: "res://scenes/level5_lucky_wheel.tscn"
 }
 
 const LEVEL_NAMES: Dictionary = {
-	1: "Level 1: Face Frenzy 🌸",
-	2: "Level 2: Fruit Ninja 🍉",
+	1: "Level 1: Fruit Ninja 🍉",
+	2: "Level 2: Face Frenzy 🌸",
 	3: "Level 3: Waddle Wars 🐧",
 	4: "Level 4: Copycat Chaos 🎭",
 	5: "Level 5: Lucky Chaos Wheel 🎡"
@@ -40,7 +45,9 @@ func _ready() -> void:
 func complete_level(level_num: int) -> void:
 	completed_levels[level_num] = true
 	level_completed.emit(level_num)
-	print("[GameManager] Level %d completed successfully (60s session finished)!" % level_num)
+	if StickerManager:
+		StickerManager.award_sticker(level_num)
+	print("[GameManager] Level %d completed successfully (45s session finished)!" % level_num)
 
 func can_unlock_secret_ending() -> bool:
 	# STRICT SAFEGUARD: All 5 levels must be completed AND Level 5 wheel finished AND results acknowledged!
@@ -60,6 +67,9 @@ func reset_game_state() -> void:
 	level5_wheel_completed = false
 	level5_results_acknowledged = false
 	secret_ending_unlocked = false
+	level2_fruits_sliced = 0
+	level3_crystals_collected = 0
+	level3_fish_collected = 0
 	is_paused = false
 	game_reset.emit()
 	print("[GameManager] Full game state reset.")
@@ -75,8 +85,8 @@ func load_level(level_num: int) -> void:
 		get_tree().change_scene_to_file(LEVEL_SCENES[level_num])
 		print("[GameManager] Transitioning to %s" % LEVEL_NAMES.get(level_num, "Unknown"))
 
-func load_secret_ending() -> void:
-	if can_unlock_secret_ending():
+func load_secret_ending(force_unlock: bool = false) -> void:
+	if force_unlock or can_unlock_secret_ending() or secret_ending_unlocked:
 		secret_ending_unlocked = true
 		get_tree().change_scene_to_file("res://scenes/secret_ending.tscn")
 		print("[GameManager] Opening Surprise Wonderland! Secret ending unlocked!")

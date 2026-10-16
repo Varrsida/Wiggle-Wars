@@ -171,7 +171,13 @@ text = "Pose tracking: Lean left or raise arms to test..."
 custom_minimum_size = Vector2(0, 55)
 layout_mode = 2
 theme_override_constants/separation = 20
-alignment = 2
+
+[node name="ContinueBtn" type="Button" parent="Content/BottomBar"]
+custom_minimum_size = Vector2(240, 48)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 0.4, 1)
+theme_override_font_sizes/font_size = 18
+text = "Start Level 1! 🚀"
 
 [node name="RetryBtn" type="Button" parent="Content/BottomBar"]
 custom_minimum_size = Vector2(160, 48)
@@ -182,13 +188,6 @@ text = "Check Tracker 🔄"
 custom_minimum_size = Vector2(160, 48)
 layout_mode = 2
 text = "Calibrate Pose 🎯"
-
-[node name="ContinueBtn" type="Button" parent="Content/BottomBar"]
-custom_minimum_size = Vector2(220, 48)
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 0.4, 1)
-theme_override_font_sizes/font_size = 18
-text = "Start Level 1! 🚀"
 
 [connection signal="pressed" from="Content/TitleBox/BackBtn" to="." method="_on_back_pressed"]
 [connection signal="pressed" from="Content/BottomBar/RetryBtn" to="." method="_on_retry_pressed"]

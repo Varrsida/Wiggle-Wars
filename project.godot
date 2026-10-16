@@ -19,6 +19,7 @@ config/icon="res://icon.svg"
 GameManager="*res://scripts/globals/game_manager.gd"
 GestureListener="*res://scripts/globals/gesture_listener.gd"
 AudioManager="*res://scripts/globals/audio_manager.gd"
+StickerManager="*res://scripts/globals/sticker_manager.gd"
 
 [display]
 

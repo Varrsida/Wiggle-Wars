@@ -64,8 +64,8 @@ func _generate_procedural_sounds() -> void:
 	# 8. Combo Fanfare (Level 2 Combo)
 	procedural_sounds["combo"] = _synth_tone_sequence([587.33, 739.99, 880.0, 1174.66], 0.08, 0.5)
 	
-	# 9. Bomb Hazard Buzz
-	procedural_sounds["bomb"] = _synth_buzzer(110.0, 0.4, 0.6)
+	# 9. Bomb Explosion (Distinct punchy blast)
+	procedural_sounds["bomb"] = _synth_explosion(0.50, 0.8)
 	
 	# 10. Penguin Chirp (Waddle Wars)
 	procedural_sounds["chirp"] = _synth_frequency_slide(880.0, 1320.0, 0.15, 0.45)
@@ -74,8 +74,9 @@ func _generate_procedural_sounds() -> void:
 	procedural_sounds["jump"] = _synth_frequency_slide(220.0, 520.0, 0.18, 0.4)
 	procedural_sounds["slide"] = _synth_noise_whoosh(0.35, 0.3)
 	
-	# 12. Crystal Collect
+	# 12. Crystal & Fish Collect
 	procedural_sounds["crystal"] = _synth_tone_sequence([880.0, 1174.66, 1760.0], 0.09, 0.5)
+	procedural_sounds["fish"] = _synth_frequency_slide(360.0, 950.0, 0.18, 0.55)
 	
 	# 13. Toy Spring / Boing (Copycat Chaos)
 	procedural_sounds["boing"] = _synth_frequency_slide(200.0, 600.0, 0.25, 0.5)
@@ -115,6 +116,9 @@ func play_voice_file(file_path: String, subtitle_text: String = "", duration: fl
 	if subtitle_text != "":
 		subtitle_requested.emit(subtitle_text, duration)
 	
+	if voice_player.playing:
+		voice_player.stop()
+
 	var stream := _load_audio_stream(file_path)
 	if stream:
 		voice_player.stream = stream
@@ -184,6 +188,39 @@ func stop_voice() -> void:
 		voice_player.stop()
 	if music_player.playing:
 		music_player.volume_db = linear_to_db(music_volume * master_volume)
+
+func play_music_file(file_path: String, vol_mult: float = 0.75, loop: bool = true) -> void:
+	if is_muted:
+		return
+	var stream := _load_audio_stream(file_path)
+	if stream:
+		if stream is AudioStreamMP3:
+			stream.loop = loop
+		music_player.stream = stream
+		music_player.volume_db = linear_to_db(music_volume * master_volume * vol_mult)
+		music_player.play()
+
+func duck_music(duck_ratio: float = 0.25) -> void:
+	if music_player.playing:
+		music_player.volume_db = linear_to_db(music_volume * master_volume * duck_ratio)
+
+func unduck_music(vol_mult: float = 0.75) -> void:
+	if music_player.playing:
+		music_player.volume_db = linear_to_db(music_volume * master_volume * vol_mult)
+
+func pause_music() -> void:
+	if music_player.playing:
+		music_player.stream_paused = true
+
+func resume_music() -> void:
+	if music_player.stream_paused:
+		music_player.stream_paused = false
+	elif music_player.stream != null and not music_player.playing:
+		music_player.play()
+
+func stop_music() -> void:
+	if music_player.playing:
+		music_player.stop()
 
 func play_music_procedural(theme: String) -> void:
 	if is_muted or music_player.playing:
@@ -335,6 +372,35 @@ func _synth_click(duration: float, max_vol: float) -> AudioStreamWAV:
 		var frac := float(i) / total_samples
 		var env := (1.0 - frac) * (1.0 - frac)
 		var val := sin(2.0 * PI * 1800.0 * (float(i) / sample_rate)) * env * max_vol
+		var sample := int(clampf(val, -1.0, 1.0) * 32767.0)
+		data.encode_s16(i * 2, sample)
+
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = sample_rate
+	stream.data = data
+	return stream
+
+func _synth_explosion(duration: float, max_vol: float) -> AudioStreamWAV:
+	var sample_rate := 22050
+	var total_samples := int(duration * sample_rate)
+	var data := PackedByteArray()
+	data.resize(total_samples * 2)
+
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 42
+	var phase := 0.0
+
+	for i in range(total_samples):
+		var frac := float(i) / total_samples
+		var env := exp(-frac * 6.5)
+		# Rapidly descending low rumble
+		var freq := lerpf(160.0, 32.0, pow(frac, 0.4))
+		phase += 2.0 * PI * freq / sample_rate
+		var rumble := sin(phase) * 0.7
+		# Explosive crackle noise burst
+		var noise := rng.randf_range(-1.0, 1.0) * 0.8
+		var val := (rumble + noise) * env * max_vol
 		var sample := int(clampf(val, -1.0, 1.0) * 32767.0)
 		data.encode_s16(i * 2, sample)
 

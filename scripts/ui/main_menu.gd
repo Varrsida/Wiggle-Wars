@@ -3,11 +3,11 @@ extends Control
 ## WIGGLE WARS! — Main Menu
 ## Animated title, real-time webcam status, neon particle accents, level launch, settings, and credits.
 
-@onready var play_btn: Button = $VBox/Buttons/PlayBtn
-@onready var setup_btn: Button = $VBox/Buttons/SetupBtn
-@onready var settings_btn: Button = $VBox/Buttons/SettingsBtn
-@onready var credits_btn: Button = $VBox/Buttons/CreditsBtn
-@onready var exit_btn: Button = $VBox/Buttons/ExitBtn
+@onready var play_btn: Button = get_node_or_null("VBox/PlayBtn")
+@onready var setup_btn: Button = get_node_or_null("VBox/SubButtons/SetupBtn")
+@onready var settings_btn: Button = get_node_or_null("VBox/SubButtons/SettingsBtn")
+@onready var credits_btn: Button = get_node_or_null("VBox/SubButtons/CreditsBtn")
+@onready var exit_btn: Button = get_node_or_null("VBox/SubButtons/ExitBtn")
 @onready var title_label: Label = $VBox/Title
 @onready var cam_badge_label: Label = $VBox/CamStatusBadge
 @onready var settings_modal: PanelContainer = $SettingsModal
@@ -38,6 +38,8 @@ func _ready() -> void:
 	_update_cam_badge()
 	
 	AudioManager.play_music_procedural("menu")
+	AudioManager.play_voice_file("res://assets/audio/lumi_welcome.wav",
+		"Hey, little Wiggle Warrior! Welcome to WIGGLE WARS! Get ready to move, laugh, and shine. Every challenge brings a new surprise, and your adventure starts NOW! Let's wiggle!", 5.5)
 
 func _update_cam_badge() -> void:
 	if not cam_badge_label:
@@ -61,6 +63,7 @@ func _on_play_pressed() -> void:
 func _on_setup_pressed() -> void:
 	AudioManager.play_sfx("chime")
 	get_tree().change_scene_to_file("res://scenes/webcam_setup.tscn")
+
 
 func _on_settings_pressed() -> void:
 	AudioManager.play_sfx("chime")

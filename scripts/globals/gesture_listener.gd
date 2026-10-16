@@ -26,7 +26,7 @@ var is_server_listening: bool = false
 
 # Video TCP Client (Port 9998)
 var video_client: StreamPeerTCP
-var video_reconnect_timer: float = 0.0
+var video_reconnect_timer: float = 1.5
 var video_read_state: int = 0
 var video_target_length: int = 0
 var video_payload: PackedByteArray = PackedByteArray()
@@ -41,10 +41,24 @@ var latest_telemetry: Dictionary = {}
 var last_gesture_time: Dictionary = {}
 const ACTION_COOLDOWN: float = 0.45
 
+# Hand-Controlled Navigation & Dwell Interaction
+var hand_cursor_layer: CanvasLayer = null
+var hand_cursor_canvas: Control = null
+var hand_screen_pos: Vector2 = Vector2(-100, -100)
+var hand_cursor_visible: bool = false
+var hand_hover_button: Button = null
+var hand_dwell_time: float = 0.0
+const DWELL_DURATION: float = 1.0 # 1.0 second dwell
+var last_hand_click_time: float = 0.0
+const CLICK_DEBOUNCE: float = 1.5 # 1.5s debounce to prevent double-clicks
+var click_ripple_time: float = 0.0
+var click_ripple_pos: Vector2 = Vector2.ZERO
+
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_start_telemetry_server()
 	_init_video_client()
+	_init_hand_cursor_overlay()
 
 func _start_telemetry_server() -> void:
 	tcp_server = TCPServer.new()
@@ -67,6 +81,9 @@ func _init_video_client() -> void:
 func _process(delta: float) -> void:
 	_poll_telemetry_server()
 	_poll_video_stream(delta)
+	_process_hand_dwell(delta)
+	if hand_cursor_canvas:
+		hand_cursor_canvas.queue_redraw()
 	
 	# Connection timeout
 	var now := Time.get_ticks_msec() / 1000.0
@@ -154,6 +171,12 @@ func _parse_json_message(line: String) -> void:
 			var reach: bool = hand.get("reach_up", false)
 			var open_p: bool = hand.get("is_open_palm", false)
 			var fist_p: bool = hand.get("is_fist", false)
+			
+			hand_screen_pos = Vector2(cur.x * 1280.0, cur.y * 720.0)
+			hand_cursor_visible = true
+			if fist_p and hand_hover_button != null:
+				_trigger_hand_click()
+				
 			hand_detected.emit(cur, swipe, waving, wave_spd, reach, open_p, fist_p)
 
 		# Pose
@@ -248,6 +271,112 @@ func request_speech_recognition() -> void:
 
 func request_pose_calibration() -> void:
 	send_tracker_command({"action": "calibrate"})
+
+# ------------------------------------------------------------------------------
+# GLOBAL HAND-CONTROLLED NAVIGATION & DWELL SELECTION
+# ------------------------------------------------------------------------------
+func _init_hand_cursor_overlay() -> void:
+	hand_cursor_layer = CanvasLayer.new()
+	hand_cursor_layer.layer = 125
+	add_child(hand_cursor_layer)
+	
+	hand_cursor_canvas = Control.new()
+	hand_cursor_canvas.set_anchors_preset(Control.PRESET_FULL_RECT)
+	hand_cursor_canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hand_cursor_layer.add_child(hand_cursor_canvas)
+	hand_cursor_canvas.draw.connect(_draw_hand_cursor)
+
+func _process_hand_dwell(delta: float) -> void:
+	if click_ripple_time > 0.0:
+		click_ripple_time = maxf(0.0, click_ripple_time - delta)
+		
+	var now := Time.get_ticks_msec() / 1000.0
+	if now - last_telemetry_time > 2.5:
+		hand_cursor_visible = false
+		hand_dwell_time = 0.0
+		hand_hover_button = null
+		return
+
+	if not hand_cursor_visible:
+		return
+
+	var current_btn: Button = _find_button_at(hand_screen_pos)
+	if current_btn != null and current_btn == hand_hover_button:
+		hand_dwell_time += delta
+		if hand_dwell_time >= DWELL_DURATION:
+			_trigger_hand_click()
+	elif current_btn != null:
+		hand_hover_button = current_btn
+		hand_dwell_time = 0.0
+	else:
+		hand_hover_button = null
+		hand_dwell_time = 0.0
+
+func _find_button_at(pos: Vector2) -> Button:
+	var tree := get_tree()
+	if not tree or not tree.root:
+		return null
+	return _search_button_recursive(tree.root, pos)
+
+func _search_button_recursive(node: Node, pos: Vector2) -> Button:
+	if not node:
+		return null
+	if node == hand_cursor_layer:
+		return null
+	if node is Button:
+		var btn: Button = node
+		if btn.is_visible_in_tree() and not btn.disabled:
+			if btn.get_global_rect().has_point(pos):
+				return btn
+	for child in node.get_children():
+		var found := _search_button_recursive(child, pos)
+		if found != null:
+			return found
+	return null
+
+func _trigger_hand_click() -> void:
+	var now := Time.get_ticks_msec() / 1000.0
+	if (now - last_hand_click_time) < CLICK_DEBOUNCE:
+		return
+	if hand_hover_button != null and hand_hover_button.is_visible_in_tree() and not hand_hover_button.disabled:
+		last_hand_click_time = now
+		click_ripple_time = 0.5
+		click_ripple_pos = hand_screen_pos
+		var btn := hand_hover_button
+		hand_dwell_time = 0.0
+		btn.pressed.emit()
+		AudioManager.play_sfx("chime")
+		print("[GestureListener] Hand navigation activated button: ", btn.name)
+
+func _draw_hand_cursor() -> void:
+	if not hand_cursor_canvas or not hand_cursor_visible:
+		return
+
+	var pos := hand_screen_pos
+	var is_hovering := (hand_hover_button != null)
+	var ring_col := Color(0.2, 0.85, 1.0, 0.9) if not is_hovering else Color(1.0, 0.82, 0.2, 0.95)
+
+	# 1. Base cursor circle with soft glow
+	hand_cursor_canvas.draw_circle(pos, 22.0, Color(ring_col.r, ring_col.g, ring_col.b, 0.22))
+	hand_cursor_canvas.draw_circle(pos, 9.0, ring_col)
+	hand_cursor_canvas.draw_circle(pos, 4.0, Color.WHITE)
+	hand_cursor_canvas.draw_arc(pos, 18.0, 0.0, TAU, 32, ring_col, 2.0)
+
+	# 2. Dwell progress ring when hovering over a button
+	if is_hovering and hand_dwell_time > 0.0:
+		var progress := clampf(hand_dwell_time / DWELL_DURATION, 0.0, 1.0)
+		var start_angle := -PI * 0.5
+		var end_angle := start_angle + progress * TAU
+		hand_cursor_canvas.draw_arc(pos, 26.0, start_angle, end_angle, 32, Color(1.0, 0.35, 0.65, 1.0), 4.5)
+		var tip := pos + Vector2(cos(end_angle), sin(end_angle)) * 26.0
+		hand_cursor_canvas.draw_circle(tip, 5.0, Color.WHITE)
+
+	# 3. Activation ripple burst
+	if click_ripple_time > 0.0:
+		var r_t := 1.0 - (click_ripple_time / 0.5)
+		var r_rad := 20.0 + r_t * 60.0
+		var r_alpha := clampf(click_ripple_time / 0.5, 0.0, 1.0)
+		hand_cursor_canvas.draw_arc(click_ripple_pos, r_rad, 0.0, TAU, 32, Color(1.0, 0.9, 0.3, r_alpha), 3.5)
 
 # ------------------------------------------------------------------------------
 # KEYBOARD TEST HARNESS & INJECTION

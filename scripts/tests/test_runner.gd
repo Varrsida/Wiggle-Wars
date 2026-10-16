@@ -36,17 +36,19 @@ func _ready() -> void:
 	results.append(_test_level2_fruit_spawning())
 	results.append(_test_level3_penguin_visibility())
 	results.append(_test_imported_assets())
+	results.append(_test_sticker_system_and_scrapbook())
+	results.append(_test_network_telemetry_and_video())
 	
 	print("\n-------------------------------------------------------")
 	print(">>> QA TEST RESULTS SUMMARY:")
 	print("-------------------------------------------------------")
 	for r in results:
-		if r["pass"]:
+		if r.get("pass", false):
 			passed += 1
-			print("  [PASS] %s" % r["name"])
+			print("  [PASS] %s" % r.get("name", "Unknown"))
 		else:
 			failed += 1
-			print("  [FAIL] %s: %s" % [r["name"], r.get("error", "")])
+			print("  [FAIL] %s: %s" % [r.get("name", "Unknown"), r.get("error", "Unknown error")])
 	
 	print("\nTOTAL TESTS: %d | PASSED: %d | FAILED: %d" % [results.size(), passed, failed])
 	if failed == 0:
@@ -57,7 +59,7 @@ func _ready() -> void:
 	get_tree().quit(0 if failed == 0 else 1)
 
 func _test_autoloads() -> Dictionary:
-	var res := {"name": "1. Global Autoloads (GameManager, GestureListener, AudioManager)", "pass": false}
+	var res := {"name": "1. Global Autoloads (GameManager, GestureListener, AudioManager, StickerManager)", "pass": false}
 	if GameManager == null:
 		res["error"] = "GameManager is null"
 		return res
@@ -67,11 +69,14 @@ func _test_autoloads() -> Dictionary:
 	if AudioManager == null:
 		res["error"] = "AudioManager is null"
 		return res
+	if StickerManager == null:
+		res["error"] = "StickerManager is null"
+		return res
 	res["pass"] = true
 	return res
 
 func _test_no_points_and_progression() -> Dictionary:
-	var res := {"name": "2. No-Points Design & 60-Second Level Progression", "pass": false}
+	var res := {"name": "2. No-Points Design & 45-Second Level Progression", "pass": false}
 	GameManager.reset_game_state()
 	
 	if GameManager.current_level != 1:
@@ -171,19 +176,24 @@ func _test_wheel_slices_count() -> Dictionary:
 		return res
 	var instance = scene.instantiate()
 	
+	if not ("SLICES" in instance):
+		res["error"] = "SLICES not found on Level 5 instance (script may have compilation error)"
+		instance.queue_free()
+		return res
+
 	if instance.SLICES.size() != 7:
 		res["error"] = "Wheel does not have exactly 7 slices! Found %d" % instance.SLICES.size()
 		instance.queue_free()
 		return res
 		
 	var expected_slices := [
-		"Chocolate Treat 🍫",
-		"Cute Stickers 🌈",
-		"Fun Pen 🖊️",
-		"Cute Keychain 🔑",
-		"Funny Chicken Dance 🐔",
-		"Freeze Like a Statue 🗿",
-		"Silly Face Challenge 🤪"
+		"Lucky Pen 🖊️",
+		"Chocolate Surprise 🍫",
+		"Sticker Blast 🌈",
+		"Keychain Quest 🔑",
+		"Funny Actions 😂",
+		"Chicken Dance 🐔",
+		"Robot Dance 🤖"
 	]
 	
 	for s in expected_slices:
@@ -252,7 +262,8 @@ func _test_all_scenes_loadable() -> Dictionary:
 		"res://scenes/level4_copycat_chaos.tscn",
 		"res://scenes/level5_lucky_wheel.tscn",
 		"res://scenes/level_results.tscn",
-		"res://scenes/secret_ending.tscn"
+		"res://scenes/secret_ending.tscn",
+		"res://scenes/scrapbook.tscn"
 	]
 	
 	for s in scenes:
@@ -275,9 +286,9 @@ func _test_level1_five_actions() -> Dictionary:
 	var inst := packed.instantiate()
 	add_child(inst)
 	
-	# Verify 60-second timer
-	if inst.time_remaining != 60.0:
-		res["error"] = "Level 1 timer not initialized to 60.0"
+	# Verify 45-second timer
+	if inst.time_remaining != 45.0:
+		res["error"] = "Level 1 timer not initialized to 45.0"
 		inst.queue_free()
 		return res
 		
@@ -309,8 +320,8 @@ func _test_level2_fruit_spawning() -> Dictionary:
 	var inst := packed.instantiate()
 	add_child(inst)
 	
-	if inst.time_remaining != 60.0:
-		res["error"] = "Level 2 timer not initialized to 60.0"
+	if inst.time_remaining != 45.0:
+		res["error"] = "Level 2 timer not initialized to 45.0"
 		inst.queue_free()
 		return res
 		
@@ -339,8 +350,8 @@ func _test_level3_penguin_visibility() -> Dictionary:
 	var inst := packed.instantiate()
 	add_child(inst)
 	
-	if inst.time_remaining != 60.0:
-		res["error"] = "Level 3 timer not initialized to 60.0"
+	if inst.time_remaining != 45.0:
+		res["error"] = "Level 3 timer not initialized to 45.0"
 		inst.queue_free()
 		return res
 		
@@ -376,7 +387,15 @@ func _test_imported_assets() -> Dictionary:
 		"res://assets/characters/penguin_hero.png",
 		"res://assets/backgrounds/level4_shinchan_bg.png",
 		"res://assets/characters/shinchan_hero.png",
-		"res://assets/backgrounds/level5_carnival_bg.png"
+		"res://assets/backgrounds/level5_carnival_bg.png",
+		"res://assets/backgrounds/level2_lake_bg.png",
+		"res://assets/backgrounds/secret_wonderland_bg.png",
+		"res://assets/backgrounds/level5_carnival_pink_bg.png",
+		"res://assets/sprites/sticker_level1.png",
+		"res://assets/sprites/sticker_level2.png",
+		"res://assets/sprites/sticker_level3.png",
+		"res://assets/sprites/sticker_level4.png",
+		"res://assets/sprites/sticker_level5.png"
 	]
 	
 	for a in required_assets:
@@ -388,5 +407,122 @@ func _test_imported_assets() -> Dictionary:
 			res["error"] = "Failed to load asset texture: %s" % a
 			return res
 			
+	res["pass"] = true
+	return res
+
+func _test_sticker_system_and_scrapbook() -> Dictionary:
+	var res := {"name": "13. Persistent Sticker System & Scrapbook Album", "pass": false}
+	if StickerManager == null:
+		res["error"] = "StickerManager autoload is null"
+		return res
+		
+	# Verify at least 5 level stickers and up to 7 scrapbook memory cards exist
+	if StickerManager.stickers.size() < 5 or StickerManager.stickers.size() > 7:
+		res["error"] = "Sticker count is %d, expected 5 to 7" % StickerManager.stickers.size()
+		return res
+		
+	# Test award sticker 1
+	var awarded := StickerManager.award_sticker(1)
+	if not StickerManager.is_sticker_unlocked(1):
+		res["error"] = "Sticker 1 was not unlocked after award_sticker(1)"
+		return res
+		
+	# Test persistent file save & load
+	StickerManager.save_stickers()
+	if not FileAccess.file_exists(StickerManager.SAVE_PATH):
+		res["error"] = "Stickers file was not saved to %s" % StickerManager.SAVE_PATH
+		return res
+		
+	# Test Scrapbook scene instantiation
+	var sb_scene := load("res://scenes/scrapbook.tscn") as PackedScene
+	if not sb_scene:
+		res["error"] = "Could not load res://scenes/scrapbook.tscn"
+		return res
+	var sb_inst = sb_scene.instantiate()
+	if not sb_inst:
+		res["error"] = "Could not instantiate scrapbook scene"
+		return res
+	add_child(sb_inst)
+	sb_inst.queue_free()
+	
+	res["pass"] = true
+	return res
+
+func _test_network_telemetry_and_video() -> Dictionary:
+	var res := {"name": "14. TCP Network Telemetry (Port 9999) & Video (Port 9998)", "pass": false}
+	
+	if not GestureListener.is_server_listening:
+		res["error"] = "GestureListener TCP server is not listening on port 9999!"
+		return res
+		
+	# 1. Test Telemetry Socket: Connect test client and send telemetry packet
+	var test_client := StreamPeerTCP.new()
+	var err := test_client.connect_to_host("127.0.0.1", 9999)
+	if err != OK:
+		res["error"] = "Failed to connect test client to port 9999: %d" % err
+		return res
+		
+	# Wait briefly for connection handshake
+	var connect_ok := false
+	for i in range(20):
+		test_client.poll()
+		if test_client.get_status() == StreamPeerTCP.STATUS_CONNECTED:
+			connect_ok = true
+			break
+		OS.delay_msec(10)
+		
+	if not connect_ok:
+		res["error"] = "Test client timed out connecting to port 9999"
+		test_client.disconnect_from_host()
+		return res
+		
+	# Send a sample telemetry packet
+	var sample_telemetry := {
+		"type": "telemetry",
+		"face": {
+			"active": true,
+			"expression": "smile",
+			"scores": {"smile": 0.95},
+			"eye_closed_duration": 0.0
+		},
+		"hand": {
+			"active": true,
+			"cursor_x": 0.5,
+			"cursor_y": 0.5,
+			"swipe": "none",
+			"is_waving": false,
+			"wave_speed": 0.0,
+			"reach_up": false,
+			"is_open_palm": true,
+			"is_fist": false
+		}
+	}
+	var json_line := JSON.stringify(sample_telemetry) + "\n"
+	test_client.put_data(json_line.to_utf8_buffer())
+	
+	# Allow GestureListener to process incoming packet
+	var packet_received := false
+	for i in range(25):
+		GestureListener._poll_telemetry_server()
+		if GestureListener.is_tracker_connected and GestureListener.latest_telemetry.size() > 0:
+			packet_received = true
+			break
+		OS.delay_msec(10)
+		
+	test_client.disconnect_from_host()
+	
+	if not packet_received:
+		res["error"] = "GestureListener failed to receive or parse telemetry packet on port 9999!"
+		return res
+		
+	# Verify video client stream configuration
+	if not GestureListener.video_client:
+		res["error"] = "GestureListener video_client is null!"
+		return res
+		
+	if not GestureListener.video_client.big_endian:
+		res["error"] = "GestureListener video_client must be configured as big-endian for 4-byte frame header!"
+		return res
+		
 	res["pass"] = true
 	return res

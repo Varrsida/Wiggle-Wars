@@ -12,6 +12,16 @@ extends Node2D
 @onready var splash_container: Node2D = $WorldLayer/SplashContainer
 @onready var blade_trail: Line2D = $WorldLayer/BladeTrail
 
+@onready var victory_overlay: CanvasLayer = get_node_or_null("VictoryOverlay")
+@onready var victory_score_label: Label = get_node_or_null("VictoryOverlay/Card/Margin/VBox/ScoreLabel")
+@onready var victory_continue_btn: Button = get_node_or_null("VictoryOverlay/Card/Margin/VBox/ContinueBtn")
+
+@onready var bomb_loss_overlay: CanvasLayer = get_node_or_null("BombLossOverlay")
+@onready var bubble_text: Label = get_node_or_null("BombLossOverlay/Card/Margin/HBox/VBox/DialogueBubble/Margin/BubbleText")
+@onready var speech_status_label: Label = get_node_or_null("BombLossOverlay/Card/Margin/HBox/VBox/StatusLabel")
+@onready var speak_btn: Button = get_node_or_null("BombLossOverlay/Card/Margin/HBox/VBox/SpeakBtn")
+@onready var wonderland_btn: Button = get_node_or_null("BombLossOverlay/Card/Margin/HBox/VBox/WonderlandBtn")
+
 class ActiveFruit:
 	var id: int
 	var type: String # watermelon, banana, strawberry, apple, orange, pineapple, bomb
@@ -33,8 +43,8 @@ var fruits: Array[ActiveFruit] = []
 var next_fruit_id: int = 1
 var spawn_timer: float = 0.0
 
-# 60-Second Level Timer
-var time_remaining: float = 60.0
+# 45-Second Level Timer
+var time_remaining: float = 45.0
 var level_finished: bool = false
 var time_elapsed: float = 0.0
 
@@ -43,16 +53,35 @@ var trail_points: Array[Vector2] = []
 var hand_cursor: Vector2 = Vector2(640, 360)
 var is_mouse_swiping: bool = false
 
-# Decorative palm trees & tropical props
-var palm_trees: Array[Dictionary] = []
+# Sliced fruits results counter
+var fruits_sliced: int = 0
+
+# Decorative tropical props (unwanted windmill palm trees removed for pristine lake view)
 var hanging_vines: Array[Dictionary] = []
 var floating_neon_fruits: Array[Dictionary] = []
 
 func _ready() -> void:
-	hud.setup_hud("Level 2: Fruit Ninja 🍉", "Swipe your hand through the air to slice the flying tropical fruit!")
+	fruits_sliced = 0
+	GameManager.level2_fruits_sliced = 0
+	
+	hud.setup_hud("Level 1: Fruit Ninja 🍉", "Swipe your hand through the air to slice the flying tropical fruit!")
 	hud.set_timer(time_remaining)
 	
+	if victory_overlay:
+		victory_overlay.visible = false
+	if bomb_loss_overlay:
+		bomb_loss_overlay.visible = false
+		
+	if victory_continue_btn:
+		victory_continue_btn.pressed.connect(_on_victory_continue_pressed)
+	if speak_btn:
+		speak_btn.pressed.connect(_on_speak_btn_pressed)
+	if wonderland_btn:
+		wonderland_btn.pressed.connect(_on_wonderland_pressed)
+		
 	GestureListener.hand_detected.connect(_on_hand_detected)
+	GestureListener.speech_result.connect(_on_speech_result)
+	GestureListener.speech_status.connect(_on_speech_status)
 	
 	if arena_canvas:
 		arena_canvas.draw.connect(_draw_arena_canvas)
@@ -60,14 +89,9 @@ func _ready() -> void:
 	_init_tropical_scenery()
 	
 	AudioManager.play_voice_file("res://assets/audio/lumi_level2.wav",
-		"Time for Fruit Ninja! Swipe your hands through the air to slice the flying tropical fruit for the next 60 seconds!", 6.0)
+		"Time for Fruit Ninja! Swipe your hands through the air to slice the flying tropical fruit for the next 45 seconds!", 6.0)
 
 func _init_tropical_scenery() -> void:
-	palm_trees.clear()
-	palm_trees.append({"pos": Vector2(100, 480), "scale": 1.25, "tilt": -0.15})
-	palm_trees.append({"pos": Vector2(240, 510), "scale": 0.95, "tilt": -0.05})
-	palm_trees.append({"pos": Vector2(1040, 500), "scale": 1.05, "tilt": 0.08})
-	palm_trees.append({"pos": Vector2(1180, 470), "scale": 1.30, "tilt": 0.18})
 	
 	hanging_vines.clear()
 	for i in range(8):
@@ -165,10 +189,10 @@ func _on_hand_detected(cursor_pos: Vector2, swipe: String, _waving: bool, _wave_
 	_add_trail_point(screen_pos)
 	
 	var move_dist := (screen_pos - prev_pos).length()
-	if swipe != "none" or move_dist > 18.0:
-		_perform_slice_segment(prev_pos, screen_pos, 75.0)
+	if swipe != "none" or move_dist > 14.0:
+		_perform_slice_segment(prev_pos, screen_pos, 105.0)
 	else:
-		_perform_slice(screen_pos, 60.0)
+		_perform_slice(screen_pos, 85.0)
 
 func _add_trail_point(pos: Vector2) -> void:
 	trail_points.append(pos)
@@ -288,31 +312,122 @@ func _handle_fruit_sliced(f: ActiveFruit, slice_origin: Vector2) -> void:
 	f.half_l_vel = f.velocity * 0.5 - norm * 260.0 + Vector2(0, -120)
 	f.half_r_vel = f.velocity * 0.5 + norm * 260.0 + Vector2(0, -120)
 	
-	match f.type:
-		"bomb":
-			AudioManager.play_sfx("bomb")
-			hud.set_instruction("⚠️ Hazard Bomb Sliced! Sparks flying!")
-			_spawn_splash(f.pos, Color(0.2, 0.2, 0.25), 1.6)
-		"watermelon_fountain":
-			AudioManager.play_sfx("splash")
-			hud.set_instruction("🍉 WATERMELON FOUNTAIN BURST! Spectacular juicy splash!")
-			_spawn_splash(f.pos, Color(0.95, 0.15, 0.3), 2.8)
-		"banana_split":
-			AudioManager.play_sfx("splash")
-			hud.set_instruction("🍌 BANANA SPLIT! Perfect tropical slice!")
-			_spawn_splash(f.pos, Color(1.0, 0.9, 0.2), 2.0)
-		"sus_strawberry":
-			AudioManager.play_sfx("splash")
-			hud.set_instruction("🍓 SUS STRAWBERRY SLICED! Funny comic reaction!")
-			_spawn_splash(f.pos, Color(1.0, 0.2, 0.4), 2.0)
-		"pineapple":
-			AudioManager.play_sfx("splash")
-			hud.set_instruction("🍍 Sweet Tropical Pineapple Sliced!")
-			_spawn_splash(f.pos, Color(1.0, 0.8, 0.1), 1.8)
-		_:
-			AudioManager.play_sfx("splash")
-			hud.set_instruction("Juicy Tropical Slice! 🍉")
-			_spawn_splash(f.pos, Color(1.0, 0.55, 0.15), 1.5)
+	if f.type == "bomb":
+		_trigger_bomb_loss(f.pos)
+	else:
+		fruits_sliced += 1
+		GameManager.level2_fruits_sliced = fruits_sliced
+		match f.type:
+			"watermelon_fountain":
+				AudioManager.play_sfx("splash")
+				hud.set_instruction("🍉 WATERMELON FOUNTAIN BURST! Sliced: %d" % fruits_sliced)
+				_spawn_splash(f.pos, Color(0.95, 0.15, 0.3), 2.8)
+			"banana_split":
+				AudioManager.play_sfx("splash")
+				hud.set_instruction("🍌 BANANA SPLIT! Sliced: %d" % fruits_sliced)
+				_spawn_splash(f.pos, Color(1.0, 0.9, 0.2), 2.0)
+			"sus_strawberry":
+				AudioManager.play_sfx("splash")
+				hud.set_instruction("🍓 SUS STRAWBERRY SLICED! Sliced: %d" % fruits_sliced)
+				_spawn_splash(f.pos, Color(1.0, 0.2, 0.4), 2.0)
+			"pineapple":
+				AudioManager.play_sfx("splash")
+				hud.set_instruction("🍍 Sweet Tropical Pineapple Sliced! Sliced: %d" % fruits_sliced)
+				_spawn_splash(f.pos, Color(1.0, 0.8, 0.1), 1.8)
+			_:
+				AudioManager.play_sfx("splash")
+				hud.set_instruction("Juicy Tropical Slice! Sliced: %d 🍉" % fruits_sliced)
+				_spawn_splash(f.pos, Color(1.0, 0.55, 0.15), 1.5)
+
+func _trigger_bomb_loss(pos: Vector2) -> void:
+	level_finished = true
+	_spawn_playful_firecracker(pos)
+	AudioManager.play_sfx("bomb")
+	hud.set_instruction("💥 PLAYFUL BOMB BURST! Shinchan arrives with a challenge!")
+	
+	if bomb_loss_overlay:
+		bomb_loss_overlay.visible = true
+		
+	# Play supplied Shin Chan Chutti Paiyan dialogue
+	AudioManager.play_voice_file("res://assets/audio/shinchan_chuti_paiyan.mp3",
+		"Shinchan: 'Chutti Paiyan!'", 4.0)
+		
+	if speech_status_label:
+		speech_status_label.text = "Listening to microphone... Repeat after Shinchan: 'Chutti Paiyan!'"
+		
+	# Request genuine microphone speech recognition
+	GestureListener.request_speech_recognition()
+
+func _on_speech_status(_status: String, message: String) -> void:
+	if speech_status_label:
+		speech_status_label.text = message
+
+func _on_speech_result(success: bool, text: String, _audio_file: String) -> void:
+	if success and text != "":
+		if speech_status_label:
+			speech_status_label.text = "Shinchan heard: '%s'! ✔ Speech repeated!" % text
+		if bubble_text:
+			bubble_text.text = "Shinchan: \"Wahaha! Spot on! You said '%s'! Let's head to Surprise Wonderland! 🌈\"" % text
+		AudioManager.play_sfx("combo")
+	else:
+		if speech_status_label:
+			speech_status_label.text = "Microphone checked! Shinchan laughs: 'Good effort, buddy!'"
+		if bubble_text:
+			bubble_text.text = "Shinchan: \"Hehehe, close enough! Off to Surprise Wonderland we go! 🌈\""
+		AudioManager.play_sfx("chime")
+
+func _on_speak_btn_pressed() -> void:
+	if speech_status_label:
+		speech_status_label.text = "Listening to microphone... Speak clearly into your mic!"
+	AudioManager.play_sfx("chime")
+	GestureListener.request_speech_recognition()
+
+func _on_wonderland_pressed() -> void:
+	AudioManager.play_sfx("chime")
+	GameManager.load_secret_ending(true)
+
+func _on_victory_continue_pressed() -> void:
+	AudioManager.play_sfx("chime")
+	GameManager.complete_level(1)
+	GameManager.load_level(2) # Proceeds to Face Frenzy!
+
+func _spawn_playful_firecracker(pos: Vector2) -> void:
+	AudioManager.play_sfx("combo")
+	AudioManager.play_sfx("chime")
+	hud.set_instruction("✨ PLAYFUL FIRECRACKER BURST! 🎆 Confetti & colorful sparks fly!")
+	
+	# Brief warm playful screen flash
+	var flash := ColorRect.new()
+	flash.color = Color(1.0, 0.95, 0.7, 0.4)
+	flash.set_anchors_preset(Control.PRESET_FULL_RECT)
+	$WorldLayer.add_child(flash)
+	var tw_f := create_tween()
+	tw_f.tween_property(flash, "color:a", 0.0, 0.25)
+	tw_f.tween_callback(flash.queue_free)
+	
+	# 32 Colorful celebration sparks (firecracker confetti)
+	var colors := [
+		Color(1.0, 0.85, 0.2), # Gold
+		Color(1.0, 0.25, 0.75), # Neon Magenta
+		Color(0.2, 0.95, 0.9), # Turquoise
+		Color(0.4, 1.0, 0.3), # Lime
+		Color(1.0, 0.5, 0.1) # Bright Orange
+	]
+	for i in range(32):
+		var spark := Node2D.new()
+		spark.position = pos
+		var angle := randf() * TAU
+		var spd := randf_range(160.0, 480.0)
+		var vel := Vector2.from_angle(angle) * spd
+		spark.set_meta("vel", vel)
+		spark.set_meta("color", colors[i % colors.size()])
+		splash_container.add_child(spark)
+		
+		var tw := create_tween()
+		var target := pos + vel * randf_range(0.45, 0.7)
+		tw.tween_property(spark, "position", target, 0.65).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		tw.parallel().tween_property(spark, "scale", Vector2.ZERO, 0.65)
+		tw.tween_callback(spark.queue_free)
 
 func _spawn_splash(pos: Vector2, col: Color, scale_mult: float) -> void:
 	for i in range(18):
@@ -333,16 +448,15 @@ func _on_level_timer_complete() -> void:
 	if level_finished:
 		return
 	level_finished = true
+	GameManager.level2_fruits_sliced = fruits_sliced
 	
-	hud.set_instruction("TIME'S UP! 🍉 Tropical Arena Conquered! 🏆")
-	AudioManager.play_sfx("combo")
+	hud.set_instruction("TIME'S UP! 🍉 Total Sliced: %d Tropical Fruits! 🏆" % fruits_sliced)
+	AudioManager.play_sfx("legend_fanfare")
 	
-	var tw := create_tween()
-	tw.tween_interval(2.5)
-	tw.tween_callback(func():
-		GameManager.complete_level(2)
-		get_tree().change_scene_to_file("res://scenes/level_results.tscn")
-	)
+	if victory_overlay:
+		victory_overlay.visible = true
+		if victory_score_label:
+			victory_score_label.text = "Total Fruits Sliced: %d 🍉" % fruits_sliced
 
 # ------------------------------------------------------------------------------
 # ILLUSTRATED TROPICAL ARENA ENVIRONMENT & FRUITS DRAWING
@@ -351,20 +465,8 @@ func _draw_arena_canvas() -> void:
 	if not arena_canvas:
 		return
 		
-	# A. Glowing Deep Neon Purple & Turquoise Cyber Horizon
-	var horizon_y := 480.0
-	arena_canvas.draw_rect(Rect2(0, horizon_y, 1280, 240), Color(0.04, 0.06, 0.14, 0.92))
-	
-	# Pulsing Neon Horizon Line
-	var h_pulse := 0.65 + sin(time_elapsed * 3.0) * 0.25
-	arena_canvas.draw_line(Vector2(0, horizon_y), Vector2(1280, horizon_y), Color(0.05, 0.95, 0.9, h_pulse), 5.0)
-	arena_canvas.draw_line(Vector2(0, horizon_y - 2), Vector2(1280, horizon_y - 2), Color(1.0, 0.2, 0.7, 0.45 * h_pulse), 2.0)
-
-	# Neon Perspective Grid Lines on Ground
-	for g in range(13):
-		var gx_bottom := g * 110.0 - 40.0
-		var gx_top := 640.0 + (gx_bottom - 640.0) * 0.22
-		arena_canvas.draw_line(Vector2(gx_top, horizon_y), Vector2(gx_bottom, 720), Color(0.08, 0.8, 0.85, 0.18), 2.0)
+	# Unwanted blue horizontal and vertical lines completely removed to preserve
+	# the pristine illustrated lake view.
 
 	# B. Floating Neon Fruit Silhouettes with Parallax Drift
 	for nf in floating_neon_fruits:
@@ -392,33 +494,7 @@ func _draw_arena_canvas() -> void:
 			_:
 				arena_canvas.draw_circle(np, 16.0 * n_sc, n_col)
 
-	# C. Swaying Neon Cyber Palm Trees
-	for p in palm_trees:
-		var pp: Vector2 = p["pos"]
-		var sc: float = p["scale"]
-		var tilt: float = p["tilt"] + sin(time_elapsed * 1.8) * 0.04
-		# Glowing Cyber Trunk
-		var trunk_pts := PackedVector2Array([
-			pp, pp + Vector2(tilt * 60, -70 * sc),
-			pp + Vector2(tilt * 140, -150 * sc), pp + Vector2(tilt * 220, -220 * sc)
-		])
-		for i in range(trunk_pts.size() - 1):
-			arena_canvas.draw_line(trunk_pts[i], trunk_pts[i+1], Color(0.12, 0.06, 0.25), 16.0 * sc)
-			arena_canvas.draw_line(trunk_pts[i], trunk_pts[i+1], Color(0.1, 0.95, 0.9, 0.75), 4.0 * sc)
-		
-		# Glowing Neon Fronds
-		var head_p := trunk_pts[-1]
-		for f in range(6):
-			var a := f * (TAU / 6.0) + tilt
-			var frond_tip := head_p + Vector2(cos(a), sin(a)) * (78.0 * sc)
-			var frond_col := Color(0.08, 0.95, 0.85, 0.85) if f % 2 == 0 else Color(1.0, 0.25, 0.75, 0.85)
-			arena_canvas.draw_line(head_p, frond_tip, frond_col, 7.0 * sc)
-			arena_canvas.draw_ellipse(frond_tip, 24.0 * sc, 11.0 * sc, Color(frond_col.r, frond_col.g, frond_col.b, 0.55))
-		# Glowing Neon Energy Coconuts
-		arena_canvas.draw_circle(head_p + Vector2(-6, 8), 8.0 * sc, Color(1.0, 0.9, 0.25, 0.95))
-		arena_canvas.draw_circle(head_p + Vector2(6, 10), 8.0 * sc, Color(1.0, 0.9, 0.25, 0.95))
-
-	# D. Hanging Glowing Cyber Jungle Vines along Top
+	# C. Hanging Glowing Cyber Jungle Vines along Top (Windmill structures removed)
 	for v in hanging_vines:
 		var vx: float = v["x"]
 		var l: float = v["length"]
@@ -448,6 +524,13 @@ func _draw_arena_canvas() -> void:
 		var col: Color = s.get_meta("color", Color.ORANGE)
 		arena_canvas.draw_circle(s.position, 7.0 * s.scale.x, col)
 		arena_canvas.draw_circle(s.position, 12.0 * s.scale.x, Color(col.r, col.g, col.b, 0.35))
+
+	# H. Glowing Ninja Blade Reticle (Follows Player's Hand)
+	if not level_finished and hand_cursor != Vector2.ZERO:
+		var pulse := 1.0 + sin(time_elapsed * 10.0) * 0.2
+		arena_canvas.draw_circle(hand_cursor, 22.0 * pulse, Color(0.2, 0.95, 1.0, 0.25))
+		arena_canvas.draw_arc(hand_cursor, 14.0 * pulse, 0, TAU, 16, Color(1.0, 1.0, 1.0, 0.9), 2.5)
+		arena_canvas.draw_circle(hand_cursor, 4.0, Color.WHITE)
 
 func _draw_single_fruit(p: Vector2, type: String, rot: float) -> void:
 	match type:

@@ -1,0 +1,198 @@
+[gd_scene format=3 uid="uid://ww_level4_copycat_chaos_01"]
+
+[ext_resource type="Script" path="res://scripts/levels/level4_copycat_chaos.gd" id="1_l4"]
+[ext_resource type="PackedScene" path="res://scenes/hud.tscn" id="2_hud"]
+[ext_resource type="Texture2D" path="res://assets/backgrounds/level4_shinchan_bg.png" id="3_shinchan_bg"]
+[ext_resource type="Texture2D" path="res://assets/characters/shinchan_hero.png" id="4_shinchan_hero"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_action_panel"]
+bg_color = Color(0.1, 0.08, 0.22, 0.88)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 0.8, 0.2, 0.9)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+shadow_color = Color(1, 0.7, 0.2, 0.25)
+shadow_size = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_meter_fill"]
+bg_color = Color(1, 0.3, 0.5, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bubble"]
+bg_color = Color(1, 1, 0.95, 0.95)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.2, 0.2, 0.2, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 4
+shadow_color = Color(0, 0, 0, 0.3)
+shadow_size = 6
+
+[node name="Level4CopycatChaos" type="Node2D"]
+script = ExtResource("1_l4")
+
+[node name="HUD" parent="." instance=ExtResource("2_hud")]
+
+[node name="BackgroundLayer" type="Node2D" parent="."]
+
+[node name="ShinchanScenicBG" type="TextureRect" parent="BackgroundLayer"]
+offset_right = 1280.0
+offset_bottom = 720.0
+texture = ExtResource("3_shinchan_bg")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="WorldLayer" type="Node2D" parent="."]
+
+[node name="WorkshopCanvas" type="Node2D" parent="WorldLayer"]
+
+[node name="ShinchanSprite" type="Sprite2D" parent="WorldLayer"]
+position = Vector2(640, 480)
+texture = ExtResource("4_shinchan_hero")
+scale = Vector2(0.42, 0.42)
+
+[node name="StageUI" type="CanvasLayer" parent="."]
+layer = 5
+
+[node name="ActionPanel" type="PanelContainer" parent="StageUI"]
+offset_left = 30.0
+offset_top = 90.0
+offset_right = 380.0
+offset_bottom = 570.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_action_panel")
+
+[node name="Margin" type="MarginContainer" parent="StageUI/ActionPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 14
+
+[node name="VBox" type="VBoxContainer" parent="StageUI/ActionPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Header" type="Label" parent="StageUI/ActionPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.3, 1)
+theme_override_font_sizes/font_size = 17
+text = "STAGE CHALLENGES 🎭"
+horizontal_alignment = 1
+
+[node name="ReactionMeter" type="VBoxContainer" parent="StageUI/ActionPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Label" type="Label" parent="StageUI/ActionPanel/Margin/VBox/ReactionMeter"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.4, 1)
+theme_override_font_sizes/font_size = 14
+text = "AUDIENCE HYPE: 15% 🔥"
+horizontal_alignment = 1
+
+[node name="ProgressBar" type="ProgressBar" parent="StageUI/ActionPanel/Margin/VBox/ReactionMeter"]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+theme_override_styles/fill = SubResource("StyleBoxFlat_meter_fill")
+max_value = 100.0
+value = 15.0
+show_percentage = false
+
+[node name="HSeparator1" type="HSeparator" parent="StageUI/ActionPanel/Margin/VBox"]
+layout_mode = 2
+
+[node name="ActionsList" type="VBoxContainer" parent="StageUI/ActionPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="WaveItem" type="Label" parent="StageUI/ActionPanel/Margin/VBox/ActionsList"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "👋 WAVE: Wave your hands wildly"
+
+[node name="ArmsItem" type="Label" parent="StageUI/ActionPanel/Margin/VBox/ActionsList"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "🙋 ARMS: Raise left or right arm"
+
+[node name="DanceItem" type="Label" parent="StageUI/ActionPanel/Margin/VBox/ActionsList"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "💃 DANCE: Chicken dance or groove"
+
+[node name="HeroItem" type="Label" parent="StageUI/ActionPanel/Margin/VBox/ActionsList"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "🦸 HERO: Strike Action Bastard pose"
+
+[node name="BodyItem" type="Label" parent="StageUI/ActionPanel/Margin/VBox/ActionsList"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "🤸 BODY: Crouch down or lean body"
+
+[node name="SpeechItem" type="Label" parent="StageUI/ActionPanel/Margin/VBox/ActionsList"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "🎤 SPEAK: Talk into microphone"
+
+[node name="HSeparator2" type="HSeparator" parent="StageUI/ActionPanel/Margin/VBox"]
+layout_mode = 2
+
+[node name="SpeechControl" type="VBoxContainer" parent="StageUI/ActionPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="SpeakBtn" type="Button" parent="StageUI/ActionPanel/Margin/VBox/SpeechControl"]
+custom_minimum_size = Vector2(240, 42)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_color = Color(1, 1, 0.3, 1)
+theme_override_font_sizes/font_size = 16
+text = "TALK TO SHINCHAN 🎤"
+
+[node name="SpeechStatusLabel" type="Label" parent="StageUI/ActionPanel/Margin/VBox/SpeechControl"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.85, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 12
+text = "Click to speak through microphone!"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="DialogueBubble" type="PanelContainer" parent="StageUI"]
+visible = false
+offset_left = 480.0
+offset_top = 180.0
+offset_right = 820.0
+offset_bottom = 270.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_bubble")
+
+[node name="Margin" type="MarginContainer" parent="StageUI/DialogueBubble"]
+layout_mode = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 10
+
+[node name="DialogueText" type="Label" parent="StageUI/DialogueBubble/Margin"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.1, 0.1, 0.1, 1)
+theme_override_font_sizes/font_size = 15
+text = "Shinchan: 'Yahoo! Let's party!'"
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+
+[connection signal="pressed" from="StageUI/ActionPanel/Margin/VBox/SpeechControl/SpeakBtn" to="." method="_on_speak_btn_pressed"]
