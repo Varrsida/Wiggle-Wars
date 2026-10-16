@@ -169,7 +169,7 @@ func _test_exact_quotes_and_messages() -> Dictionary:
 	return res
 
 func _test_wheel_slices_count() -> Dictionary:
-	var res := {"name": "5. Exactly Seven Wheel Slices & Slices Mapping", "pass": false}
+	var res := {"name": "5. Exactly Five Wheel Slices & Slices Mapping", "pass": false}
 	var scene := load("res://scenes/level5_lucky_wheel.tscn")
 	if not scene:
 		res["error"] = "Could not load level5_lucky_wheel.tscn"
@@ -181,19 +181,17 @@ func _test_wheel_slices_count() -> Dictionary:
 		instance.queue_free()
 		return res
 
-	if instance.SLICES.size() != 7:
-		res["error"] = "Wheel does not have exactly 7 slices! Found %d" % instance.SLICES.size()
+	if instance.SLICES.size() != 5:
+		res["error"] = "Wheel does not have exactly 5 slices! Found %d" % instance.SLICES.size()
 		instance.queue_free()
 		return res
 		
 	var expected_slices := [
-		"Lucky Pen 🖊️",
-		"Chocolate Surprise 🍫",
-		"Sticker Blast 🌈",
-		"Keychain Quest 🔑",
-		"Funny Actions 😂",
-		"Chicken Dance 🐔",
-		"Robot Dance 🤖"
+		"Silly Dance 🤖",
+		"Funny Face 😂",
+		"Hands Up! 🙌",
+		"Penguin Waddle 🐧",
+		"Wiggle Attack 👋"
 	]
 	
 	for s in expected_slices:

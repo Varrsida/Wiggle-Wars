@@ -29,6 +29,9 @@ var tulip_tex: Texture2D = preload("res://assets/sprites/tulip_flower.png")
 @onready var defeat_overlay: CanvasLayer = get_node_or_null("DefeatOverlay")
 @onready var defeat_score_label: Label = get_node_or_null("DefeatOverlay/Card/Margin/VBox/ScoreLabel")
 @onready var defeat_wheel_btn: Button = get_node_or_null("DefeatOverlay/Card/Margin/VBox/WheelBtn")
+@onready var big_countdown_label: Label = get_node_or_null("CountdownLayer/CenterBox/BigCountdownLabel")
+
+var last_countdown_sec: int = -1
 
 var completed_actions: Dictionary = {
 	"smile": false,
@@ -135,11 +138,29 @@ func _init_world_elements() -> void:
 func _process(delta: float) -> void:
 	time_elapsed += delta
 	
-	# 60-Second Level Timer Processing
+	# 30-Second Level Timer Processing & 10s Final Countdown
 	if not level_finished:
 		time_remaining = maxf(0.0, time_remaining - delta)
 		hud.set_timer(time_remaining)
+		
+		if time_remaining <= 10.0 and time_remaining > 0.0:
+			var cur_sec := int(ceil(time_remaining))
+			if cur_sec in range(1, 11) and cur_sec != last_countdown_sec:
+				last_countdown_sec = cur_sec
+				if big_countdown_label:
+					big_countdown_label.text = str(cur_sec)
+					big_countdown_label.visible = true
+					big_countdown_label.scale = Vector2(1.4, 1.4)
+					var tw_cd := create_tween()
+					tw_cd.tween_property(big_countdown_label, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+					AudioManager.play_sfx("chime")
+		else:
+			if big_countdown_label:
+				big_countdown_label.visible = false
+
 		if time_remaining <= 0.0:
+			if big_countdown_label:
+				big_countdown_label.visible = false
 			_on_level_timer_complete()
 	
 	# Handle sleepy mode duration

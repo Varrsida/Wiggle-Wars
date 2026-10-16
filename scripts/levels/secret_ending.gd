@@ -415,34 +415,10 @@ func _draw_wonderland() -> void:
 		wonderland_canvas.draw_line(Vector2(star_x, star_y - 6), Vector2(star_x, star_y + 6), star_col, 1.2)
 
 	# D. Characters Gathered Together in Surprise Wonderland
+	# The background image already features the angel, baby penguin, and Shin Chan illustrated together.
+	# We draw Lumi the magical fairy guide hovering above with her glowing wand and shimmering aura.
 	if current_state >= CinematicState.SCENE_B_EVERYONE_APPEARS:
-		# 1. Cute Baby Penguin with Winter Beanie (Left)
-		var p_pos := Vector2(300.0 + sin(time_elapsed * 4.0) * 10.0, 500.0)
-		wonderland_canvas.draw_ellipse(Vector2(p_pos.x, 575.0), 45.0, 14.0, Color(0.3, 0.2, 0.35, 0.28))
-		if penguin_tex:
-			var p_w := 140.0
-			var p_h := 140.0 * (float(penguin_tex.get_height()) / float(penguin_tex.get_width()))
-			wonderland_canvas.draw_texture_rect(penguin_tex, Rect2(p_pos.x - p_w * 0.5, p_pos.y - p_h * 0.5, p_w, p_h), false)
-
-		# 2. Shinchan Standing Hero (Right)
-		var c_pos := Vector2(980.0 + sin(time_elapsed * 5.0) * -10.0, 485.0)
-		wonderland_canvas.draw_ellipse(Vector2(c_pos.x, 575.0), 45.0, 14.0, Color(0.3, 0.2, 0.35, 0.28))
-		if shinchan_tex:
-			var s_w := 130.0
-			var s_h := 130.0 * (float(shinchan_tex.get_height()) / float(shinchan_tex.get_width()))
-			wonderland_canvas.draw_texture_rect(shinchan_tex, Rect2(c_pos.x - s_w * 0.5, c_pos.y - s_h * 0.5, s_w, s_h), false)
-
-		# 3. Supplied Angel Character (Floating Center Above Cloud Horizon)
-		if angel_tex:
-			var angel_pos := Vector2(640.0, 310.0 + sin(time_elapsed * 2.8) * 14.0)
-			# Soft celestial golden halo aura
-			wonderland_canvas.draw_circle(angel_pos + Vector2(0, -40), 90.0, Color(1.0, 0.95, 0.75, 0.25))
-			wonderland_canvas.draw_circle(angel_pos + Vector2(0, -40), 60.0, Color(1.0, 0.85, 0.95, 0.20))
-			var a_w := 240.0
-			var a_h := a_w * (float(angel_tex.get_height()) / float(angel_tex.get_width()))
-			wonderland_canvas.draw_texture_rect(angel_tex, Rect2(angel_pos.x - a_w * 0.5, angel_pos.y - a_h * 0.5, a_w, a_h), false)
-
-		# 4. Magical Guide Fairy Lumi (Hovering on Upper Left with Wand)
+		# Magical Guide Fairy Lumi (Hovering on Upper Left with Wand)
 		var lumi_pos := Vector2(460.0, 240.0 + sin(time_elapsed * 3.5) * 14.0)
 		var aura_glow := Color(1.0, 0.95, 0.7, 0.40 + sin(time_elapsed * 6.0) * 0.15)
 		wonderland_canvas.draw_circle(lumi_pos, 36.0, aura_glow)

@@ -77,6 +77,7 @@ func _init_video_client() -> void:
 	video_client.big_endian = true
 	video_read_state = 0
 	video_payload.clear()
+	video_client.connect_to_host(HOST, VIDEO_PORT)
 
 func _process(delta: float) -> void:
 	_poll_telemetry_server()
@@ -254,6 +255,10 @@ func _poll_video_stream(delta: float) -> void:
 							current_frame_texture.set_image(img)
 						frame_received.emit(current_frame_texture)
 						frames_decoded += 1
+						last_telemetry_time = Time.get_ticks_msec() / 1000.0
+						if not is_tracker_connected:
+							is_tracker_connected = true
+							tracker_connected.emit()
 				video_read_state = 0
 				video_payload.clear()
 

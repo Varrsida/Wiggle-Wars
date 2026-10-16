@@ -31,23 +31,19 @@ extends Node2D
 @onready var countdown_label: Label = $EventOverlay/Panel/Margin/VBox/CountdownLabel
 
 const SLICES: Array[String] = [
-	"Lucky Pen 🖊️",
-	"Chocolate Surprise 🍫",
-	"Sticker Blast 🌈",
-	"Keychain Quest 🔑",
-	"Funny Actions 😂",
-	"Chicken Dance 🐔",
-	"Robot Dance 🤖"
+	"Silly Dance 🤖",
+	"Funny Face 😂",
+	"Hands Up! 🙌",
+	"Penguin Waddle 🐧",
+	"Wiggle Attack 👋"
 ]
 
 var outcome_textures: Dictionary = {
-	0: preload("res://assets/sprites/outcome_pen.png"),
-	1: preload("res://assets/sprites/outcome_chocolate.png"),
+	0: preload("res://assets/sprites/outcome_robot_dance.png"),
+	1: preload("res://assets/sprites/outcome_funny_actions.png"),
 	2: preload("res://assets/sprites/outcome_sticker_blast.png"),
-	3: preload("res://assets/sprites/outcome_keychain.png"),
-	4: preload("res://assets/sprites/outcome_funny_actions.png"),
-	5: preload("res://assets/sprites/outcome_chicken_dance.png"),
-	6: preload("res://assets/sprites/outcome_robot_dance.png")
+	3: preload("res://assets/sprites/outcome_chicken_dance.png"),
+	4: preload("res://assets/sprites/outcome_pen.png")
 }
 
 # Round Phases (Strict 20-Second Master Timeline)
@@ -247,30 +243,17 @@ func _start_wheel_spin() -> void:
 	
 	spin_btn.disabled = true
 	
-	# Choose random outcome among exactly 7 slices
-	target_slice_idx = randi() % 7
+	# Choose random outcome among the 5 visual sectors
+	target_slice_idx = randi() % 5
 	GameManager.level5_wheel_outcome = SLICES[target_slice_idx]
 	
 	# The 5 visual sectors on the disc:
-	# Sector 0 (Top / 12 o'clock): Silly Dance / Robot Dance (0 rad)
+	# Sector 0 (Top / 12 o'clock): Silly Dance (0 rad)
 	# Sector 1 (Top-Right): Funny Face (2*PI/5 rad = 72 deg)
 	# Sector 2 (Bottom-Right): Hands Up! (4*PI/5 rad = 144 deg)
 	# Sector 3 (Bottom-Left): Penguin Waddle (6*PI/5 rad = 216 deg)
 	# Sector 4 (Top-Left): Wiggle Attack (8*PI/5 rad = 288 deg)
-	# Rotating clockwise by (TAU - phi) brings the sector to 12 o'clock pointer!
-	var sector_phi: float = 0.0
-	match target_slice_idx:
-		0, 3: # Lucky Pen, Keychain Quest -> Wiggle Attack
-			sector_phi = 8.0 * PI / 5.0
-		1, 2: # Chocolate, Sticker Blast -> Hands Up!
-			sector_phi = 4.0 * PI / 5.0
-		4: # Funny Actions -> Funny Face
-			sector_phi = 2.0 * PI / 5.0
-		5: # Chicken Dance -> Penguin Waddle
-			sector_phi = 6.0 * PI / 5.0
-		6: # Robot Dance -> Silly Dance
-			sector_phi = 0.0
-			
+	var sector_phi: float = float(target_slice_idx) * (2.0 * PI / 5.0)
 	var landing_offset := fmod(TAU - sector_phi, TAU)
 	target_angle = (TAU * 5.0) + landing_offset
 	
@@ -290,48 +273,36 @@ func _activate_outcome_ui() -> void:
 	
 	match target_slice_idx:
 		0:
-			event_title.text = "LUCKY PEN 🖊️ — WIGGLE ATTACK!"
-			event_desc.text = "Wiggle both hands quickly for 5 seconds to claim your Whimsical Pen!"
-			active_challenge_name = "wiggle_attack"
-			AudioManager.play_sfx("crystal")
-			hud.set_instruction("👋 Wiggle both hands quickly to claim your Lucky Pen!")
+			event_title.text = "SILLY DANCE 🤖"
+			event_desc.text = "Move and dance with fun robotic moves for 5 seconds!"
+			active_challenge_name = "robot_dance"
+			AudioManager.play_sfx("boing")
+			hud.set_instruction("🤖 Move and dance with stiff robotic moves!")
 		1:
-			event_title.text = "CHOCOLATE SURPRISE 🍫 — HANDS UP!"
-			event_desc.text = "Raise both hands high to celebrate your Chocolate Surprise!"
-			active_challenge_name = "hands_up"
-			AudioManager.play_sfx("combo")
-			hud.set_instruction("🙌 Raise both hands high to claim your Chocolate treat!")
-		2:
-			event_title.text = "STICKER BLAST 🌈 — HANDS UP!"
-			event_desc.text = "Raise both hands high to trigger the Rainbow Sticker Blast!"
-			active_challenge_name = "hands_up"
-			AudioManager.play_sfx("chime")
-			hud.set_instruction("🙌 Raise both hands high to trigger Sticker Blast!")
-		3:
-			event_title.text = "KEYCHAIN QUEST 🔑 — WIGGLE ATTACK!"
-			event_desc.text = "Wiggle both hands quickly to win the Lucky Carnival Keychain!"
-			active_challenge_name = "wiggle_attack"
-			AudioManager.play_sfx("crystal")
-			hud.set_instruction("👋 Wiggle both hands quickly for your Keychain!")
-		4:
-			event_title.text = "FUNNY ACTIONS 😂 — FUNNY FACE!"
+			event_title.text = "FUNNY FACE 😂"
 			event_desc.text = "Make a silly face and hold it for 3 seconds!"
 			active_challenge_name = "funny_actions"
 			AudioManager.play_sfx("boing")
 			hud.set_instruction("😂 Make a silly face and hold it for 3 seconds!")
-		5:
-			event_title.text = "CHICKEN DANCE 🐔 — PENGUIN WADDLE!"
-			event_desc.text = "Move like a penguin from side to side or flap like a chicken!"
+		2:
+			event_title.text = "HANDS UP! 🙌"
+			event_desc.text = "Raise both hands high to celebrate the carnival!"
+			active_challenge_name = "hands_up"
+			AudioManager.play_sfx("combo")
+			hud.set_instruction("🙌 Raise both hands high in the air!")
+		3:
+			event_title.text = "PENGUIN WADDLE 🐧"
+			event_desc.text = "Move like a penguin from side to side or flap your wings!"
 			active_challenge_name = "chicken_dance"
 			AudioManager.play_sfx("quack")
 			hud.set_instruction("🐧 Move like a penguin from side to side!")
 			_spawn_ducks()
-		6:
-			event_title.text = "ROBOT DANCE 🤖 — SILLY DANCE!"
-			event_desc.text = "Move and dance with stiff robotic moves for 5 seconds!"
-			active_challenge_name = "robot_dance"
-			AudioManager.play_sfx("boing")
-			hud.set_instruction("🤖 Move and dance with stiff robotic moves!")
+		4:
+			event_title.text = "WIGGLE ATTACK 👋"
+			event_desc.text = "Wiggle both hands quickly to unleash the wiggle attack!"
+			active_challenge_name = "wiggle_attack"
+			AudioManager.play_sfx("crystal")
+			hud.set_instruction("👋 Wiggle both hands quickly!")
 
 func _trigger_celebration_effects() -> void:
 	AudioManager.play_sfx("combo")

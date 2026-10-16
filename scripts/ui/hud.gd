@@ -33,6 +33,12 @@ func _ready() -> void:
 	GestureListener.tracker_disconnected.connect(_on_tracker_disconnected)
 	GestureListener.frame_received.connect(_on_frame_received)
 	
+	if video_pip and GestureListener.current_frame_texture:
+		video_pip.texture = GestureListener.current_frame_texture
+		var pip_lbl: Label = get_node_or_null("VideoPiP/PiPLabel")
+		if pip_lbl:
+			pip_lbl.text = "LIVE CAMERA 📷"
+			
 	_update_cam_status(GestureListener.is_tracker_connected)
 	set_timer(45.0)
 
@@ -127,8 +133,11 @@ func _update_cam_status(connected: bool) -> void:
 		cam_status_label.text = "TRACKER ACTIVE" if connected else "TRACKER OFFLINE"
 		cam_status_label.add_theme_color_override("font_color", Color(0.3, 1.0, 0.5) if connected else Color(1.0, 0.4, 0.4))
 	var pip_lbl: Label = get_node_or_null("VideoPiP/PiPLabel")
-	if pip_lbl and not connected:
-		pip_lbl.text = "CAMERA OFFLINE"
+	if pip_lbl:
+		if connected:
+			pip_lbl.text = "LIVE CAMERA 📷"
+		else:
+			pip_lbl.text = "CAMERA OFFLINE"
 
 func _on_frame_received(tex: ImageTexture) -> void:
 	if video_pip:
@@ -136,6 +145,7 @@ func _on_frame_received(tex: ImageTexture) -> void:
 	var pip_lbl: Label = get_node_or_null("VideoPiP/PiPLabel")
 	if pip_lbl and pip_lbl.text != "LIVE CAMERA 📷":
 		pip_lbl.text = "LIVE CAMERA 📷"
+	_update_cam_status(true)
 
 func _on_pause_btn_pressed() -> void:
 	_toggle_pause()
