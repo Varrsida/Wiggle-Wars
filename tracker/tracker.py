@@ -102,7 +102,8 @@ class FrameServer:
         while self.running:
             try:
                 client, addr = self.server_sock.accept()
-                client.settimeout(0.5)
+                client.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+                client.settimeout(2.0)
                 with self.clients_lock:
                     self.clients.append(client)
                 print(f"[FrameServer] Godot video client connected from {addr}")
@@ -121,7 +122,10 @@ class FrameServer:
             for client in self.clients:
                 try:
                     client.sendall(packet)
-                except Exception:
+                except (BlockingIOError, socket.timeout):
+                    # Buffer full - drop this single frame to avoid backlog/latency, retain connection
+                    pass
+                except (ConnectionResetError, BrokenPipeError, OSError):
                     disconnected.append(client)
             for c in disconnected:
                 self.clients.remove(c)

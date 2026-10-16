@@ -134,6 +134,16 @@ grow_vertical = 0
 expand_mode = 1
 stretch_mode = 5
 
+[node name="PiPBG" type="ColorRect" parent="VideoPiP"]
+show_behind_parent = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.08, 0.06, 0.16, 0.85)
+
 [node name="PiPBorder" type="ReferenceRect" parent="VideoPiP"]
 layout_mode = 1
 anchors_preset = 15

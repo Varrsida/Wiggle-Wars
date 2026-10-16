@@ -126,10 +126,16 @@ func _update_cam_status(connected: bool) -> void:
 	if cam_status_label:
 		cam_status_label.text = "TRACKER ACTIVE" if connected else "TRACKER OFFLINE"
 		cam_status_label.add_theme_color_override("font_color", Color(0.3, 1.0, 0.5) if connected else Color(1.0, 0.4, 0.4))
+	var pip_lbl: Label = get_node_or_null("VideoPiP/PiPLabel")
+	if pip_lbl and not connected:
+		pip_lbl.text = "CAMERA OFFLINE"
 
 func _on_frame_received(tex: ImageTexture) -> void:
 	if video_pip:
 		video_pip.texture = tex
+	var pip_lbl: Label = get_node_or_null("VideoPiP/PiPLabel")
+	if pip_lbl and pip_lbl.text != "LIVE CAMERA 📷":
+		pip_lbl.text = "LIVE CAMERA 📷"
 
 func _on_pause_btn_pressed() -> void:
 	_toggle_pause()

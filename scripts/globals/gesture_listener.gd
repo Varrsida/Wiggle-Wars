@@ -81,9 +81,6 @@ func _init_video_client() -> void:
 func _process(delta: float) -> void:
 	_poll_telemetry_server()
 	_poll_video_stream(delta)
-	_process_hand_dwell(delta)
-	if hand_cursor_canvas:
-		hand_cursor_canvas.queue_redraw()
 	
 	# Connection timeout
 	var now := Time.get_ticks_msec() / 1000.0
@@ -174,8 +171,6 @@ func _parse_json_message(line: String) -> void:
 			
 			hand_screen_pos = Vector2(cur.x * 1280.0, cur.y * 720.0)
 			hand_cursor_visible = true
-			if fist_p and hand_hover_button != null:
-				_trigger_hand_click()
 				
 			hand_detected.emit(cur, swipe, waving, wave_spd, reach, open_p, fist_p)
 
@@ -215,17 +210,19 @@ func _poll_video_stream(delta: float) -> void:
 	if status != StreamPeerTCP.STATUS_CONNECTED:
 		return
 
-	# Loop while complete frames or chunks can be assembled
-	while video_client.get_status() == StreamPeerTCP.STATUS_CONNECTED:
+	# Limit to maximum 2 frames decoded per tick to avoid starving the Godot main thread
+	var frames_decoded := 0
+	while video_client.get_status() == StreamPeerTCP.STATUS_CONNECTED and frames_decoded < 2:
 		# State 0: Read 4-byte big-endian frame size
 		if video_read_state == 0:
 			if video_client.get_available_bytes() < 4:
 				break
 			video_target_length = video_client.get_32()
 			if video_target_length <= 0 or video_target_length > 2_000_000:
-				# Stream desynced or invalid header, reset buffer
+				# Stream desynced or invalid header, disconnect to cleanly reconnect
 				video_target_length = 0
 				video_payload.clear()
+				video_client.disconnect_from_host()
 				break
 			video_read_state = 1
 			video_payload.clear()
@@ -254,8 +251,9 @@ func _poll_video_stream(delta: float) -> void:
 						if not current_frame_texture:
 							current_frame_texture = ImageTexture.create_from_image(img)
 						else:
-							current_frame_texture.update(img)
+							current_frame_texture.set_image(img)
 						frame_received.emit(current_frame_texture)
+						frames_decoded += 1
 				video_read_state = 0
 				video_payload.clear()
 
@@ -273,110 +271,20 @@ func request_pose_calibration() -> void:
 	send_tracker_command({"action": "calibrate"})
 
 # ------------------------------------------------------------------------------
-# GLOBAL HAND-CONTROLLED NAVIGATION & DWELL SELECTION
+# WEBCAM GESTURE NAVIGATION RESTRICTIONS (Menu clicks strictly disabled per req 2)
 # ------------------------------------------------------------------------------
 func _init_hand_cursor_overlay() -> void:
-	hand_cursor_layer = CanvasLayer.new()
-	hand_cursor_layer.layer = 125
-	add_child(hand_cursor_layer)
-	
-	hand_cursor_canvas = Control.new()
-	hand_cursor_canvas.set_anchors_preset(Control.PRESET_FULL_RECT)
-	hand_cursor_canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hand_cursor_layer.add_child(hand_cursor_canvas)
-	hand_cursor_canvas.draw.connect(_draw_hand_cursor)
+	# Hand cursor dwell clicking disabled: menus are operated exclusively via UI buttons
+	pass
 
-func _process_hand_dwell(delta: float) -> void:
-	if click_ripple_time > 0.0:
-		click_ripple_time = maxf(0.0, click_ripple_time - delta)
-		
-	var now := Time.get_ticks_msec() / 1000.0
-	if now - last_telemetry_time > 2.5:
-		hand_cursor_visible = false
-		hand_dwell_time = 0.0
-		hand_hover_button = null
-		return
-
-	if not hand_cursor_visible:
-		return
-
-	var current_btn: Button = _find_button_at(hand_screen_pos)
-	if current_btn != null and current_btn == hand_hover_button:
-		hand_dwell_time += delta
-		if hand_dwell_time >= DWELL_DURATION:
-			_trigger_hand_click()
-	elif current_btn != null:
-		hand_hover_button = current_btn
-		hand_dwell_time = 0.0
-	else:
-		hand_hover_button = null
-		hand_dwell_time = 0.0
-
-func _find_button_at(pos: Vector2) -> Button:
-	var tree := get_tree()
-	if not tree or not tree.root:
-		return null
-	return _search_button_recursive(tree.root, pos)
-
-func _search_button_recursive(node: Node, pos: Vector2) -> Button:
-	if not node:
-		return null
-	if node == hand_cursor_layer:
-		return null
-	if node is Button:
-		var btn: Button = node
-		if btn.is_visible_in_tree() and not btn.disabled:
-			if btn.get_global_rect().has_point(pos):
-				return btn
-	for child in node.get_children():
-		var found := _search_button_recursive(child, pos)
-		if found != null:
-			return found
-	return null
+func _process_hand_dwell(_delta: float) -> void:
+	pass
 
 func _trigger_hand_click() -> void:
-	var now := Time.get_ticks_msec() / 1000.0
-	if (now - last_hand_click_time) < CLICK_DEBOUNCE:
-		return
-	if hand_hover_button != null and hand_hover_button.is_visible_in_tree() and not hand_hover_button.disabled:
-		last_hand_click_time = now
-		click_ripple_time = 0.5
-		click_ripple_pos = hand_screen_pos
-		var btn := hand_hover_button
-		hand_dwell_time = 0.0
-		btn.pressed.emit()
-		AudioManager.play_sfx("chime")
-		print("[GestureListener] Hand navigation activated button: ", btn.name)
+	pass
 
 func _draw_hand_cursor() -> void:
-	if not hand_cursor_canvas or not hand_cursor_visible:
-		return
-
-	var pos := hand_screen_pos
-	var is_hovering := (hand_hover_button != null)
-	var ring_col := Color(0.2, 0.85, 1.0, 0.9) if not is_hovering else Color(1.0, 0.82, 0.2, 0.95)
-
-	# 1. Base cursor circle with soft glow
-	hand_cursor_canvas.draw_circle(pos, 22.0, Color(ring_col.r, ring_col.g, ring_col.b, 0.22))
-	hand_cursor_canvas.draw_circle(pos, 9.0, ring_col)
-	hand_cursor_canvas.draw_circle(pos, 4.0, Color.WHITE)
-	hand_cursor_canvas.draw_arc(pos, 18.0, 0.0, TAU, 32, ring_col, 2.0)
-
-	# 2. Dwell progress ring when hovering over a button
-	if is_hovering and hand_dwell_time > 0.0:
-		var progress := clampf(hand_dwell_time / DWELL_DURATION, 0.0, 1.0)
-		var start_angle := -PI * 0.5
-		var end_angle := start_angle + progress * TAU
-		hand_cursor_canvas.draw_arc(pos, 26.0, start_angle, end_angle, 32, Color(1.0, 0.35, 0.65, 1.0), 4.5)
-		var tip := pos + Vector2(cos(end_angle), sin(end_angle)) * 26.0
-		hand_cursor_canvas.draw_circle(tip, 5.0, Color.WHITE)
-
-	# 3. Activation ripple burst
-	if click_ripple_time > 0.0:
-		var r_t := 1.0 - (click_ripple_time / 0.5)
-		var r_rad := 20.0 + r_t * 60.0
-		var r_alpha := clampf(click_ripple_time / 0.5, 0.0, 1.0)
-		hand_cursor_canvas.draw_arc(click_ripple_pos, r_rad, 0.0, TAU, 32, Color(1.0, 0.9, 0.3, r_alpha), 3.5)
+	pass
 
 # ------------------------------------------------------------------------------
 # KEYBOARD TEST HARNESS & INJECTION

@@ -6,8 +6,11 @@ echo    *** WIGGLE WARS! WEBCAM GESTURE PARTY GAME ***
 echo =======================================================
 echo.
 
+set "PROJ_DIR=%~dp0"
+if "%PROJ_DIR:~-1%"=="\" set "PROJ_DIR=%PROJ_DIR:~0,-1%"
+
 set "GODOT_BIN=C:\Users\Varrsida\Downloads\Godot_v4.7.2-stable_win64_console.exe"
-set "TRACKER_SCRIPT=%~dp0tracker\tracker.py"
+set "TRACKER_SCRIPT=%PROJ_DIR%\tracker\tracker.py"
 
 :: 1. Validate Godot executable
 if not exist "%GODOT_BIN%" (
@@ -40,27 +43,40 @@ if not exist "%TRACKER_SCRIPT%" (
 
 :: 4. Check if tracker is already running on port 9998
 echo Checking webcam tracker status...
+set "TRACKER_ONLINE=0"
 python -c "import socket, sys; s=socket.socket(); s.settimeout(0.3); res=s.connect_ex(('127.0.0.1', 9998)); s.close(); sys.exit(0 if res==0 else 1)" >nul 2>nul
-if errorlevel 1 (
-    echo [1/3] Starting Python webcam tracker in background...
-    start "WIGGLE WARS Tracker" cmd /c "python \"%TRACKER_SCRIPT%\""
-    echo [2/3] Waiting for webcam and socket servers to initialize...
-    ping -n 4 127.0.0.1 >nul 2>nul
-) else (
+if not errorlevel 1 set "TRACKER_ONLINE=1"
+
+if "%TRACKER_ONLINE%"=="1" (
     echo [INFO] Webcam tracker is already active on port 9998. Reusing running process.
+    goto launch_godot
 )
 
-:: 5. Check if Godot is already running
-powershell -NoProfile -Command "if (Get-Process -Name 'Godot*' -ErrorAction SilentlyContinue) { exit 1 } else { exit 0 }" >nul 2>nul
-if errorlevel 1 (
-    echo [NOTICE] An instance of Godot is already open!
-    echo Bringing existing game window to front or starting second instance...
-)
+echo [1/3] Starting Python webcam tracker in background...
+start "WIGGLE WARS Tracker" cmd /c "python \"%TRACKER_SCRIPT%\""
+echo [2/3] Waiting for webcam and socket servers to become ready...
 
-:: 6. Launch Godot Game
+set "ATTEMPTS=0"
+:check_tracker_loop
+set /a ATTEMPTS+=1
+python -c "import socket, sys; s=socket.socket(); s.settimeout(0.5); res=s.connect_ex(('127.0.0.1', 9998)); s.close(); sys.exit(0 if res==0 else 1)" >nul 2>nul
+if not errorlevel 1 (
+    echo [INFO] Webcam video server is ready on port 9998!
+    goto launch_godot
+)
+if %ATTEMPTS% geq 6 (
+    echo [INFO] Continuing to launch game client...
+    goto launch_godot
+)
+ping -n 2 127.0.0.1 >nul 2>nul
+goto check_tracker_loop
+
+:launch_godot
+:: 5. Launch Godot Game (clean unquoted directory without trailing backslash)
 echo [3/3] Launching Godot 4.7.2 game client...
+echo Project directory: "%PROJ_DIR%"
 echo.
-"%GODOT_BIN%" --path "%~dp0." %*
+"%GODOT_BIN%" --path "%PROJ_DIR%" %*
 set "GAME_EXIT_CODE=%errorlevel%"
 
 echo.

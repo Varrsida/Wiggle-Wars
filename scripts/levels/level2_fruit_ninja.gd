@@ -22,9 +22,12 @@ extends Node2D
 @onready var speak_btn: Button = get_node_or_null("BombLossOverlay/Card/Margin/HBox/VBox/SpeakBtn")
 @onready var wonderland_btn: Button = get_node_or_null("BombLossOverlay/Card/Margin/HBox/VBox/WonderlandBtn")
 @onready var shinchan_timer_label: Label = get_node_or_null("BombLossOverlay/Card/Margin/HBox/VBox/CountdownLabel")
+@onready var big_countdown_label: Label = get_node_or_null("CountdownLayer/CenterBox/BigCountdownLabel")
 
 var bombs_cut: int = 0
 const MAX_BOMBS_BEFORE_LOSS: int = 4
+var last_bomb_slice_time: float = -1.0
+var last_countdown_sec: int = -1
 var shinchan_challenge_active: bool = false
 var shinchan_timer: float = 25.0
 var shinchan_concluded: bool = false
@@ -147,11 +150,29 @@ func _process(delta: float) -> void:
 		if shinchan_timer <= 0.0:
 			_conclude_shinchan_challenge(false)
 
-	# 30-Second Level Timer
+	# 30-Second Level Timer & 10s Countdown
 	if not level_finished:
 		time_remaining = maxf(0.0, time_remaining - delta)
 		hud.set_timer(time_remaining)
+		
+		if time_remaining <= 10.0 and time_remaining > 0.0:
+			var cur_sec := int(ceil(time_remaining))
+			if cur_sec in range(1, 11) and cur_sec != last_countdown_sec:
+				last_countdown_sec = cur_sec
+				if big_countdown_label:
+					big_countdown_label.text = str(cur_sec)
+					big_countdown_label.visible = true
+					big_countdown_label.scale = Vector2(1.4, 1.4)
+					var tw_cd := create_tween()
+					tw_cd.tween_property(big_countdown_label, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+					AudioManager.play_sfx("chime")
+		else:
+			if big_countdown_label:
+				big_countdown_label.visible = false
+				
 		if time_remaining <= 0.0:
+			if big_countdown_label:
+				big_countdown_label.visible = false
 			_on_level_timer_complete()
 	
 	if not level_finished:
@@ -211,10 +232,10 @@ func _on_hand_detected(cursor_pos: Vector2, swipe: String, _waving: bool, _wave_
 	_add_trail_point(screen_pos)
 	
 	var move_dist := (screen_pos - prev_pos).length()
-	if swipe != "none" or move_dist > 14.0:
+	# Responsive slicing: requires intentional motion or active swipe
+	# Prevents stationary hands from continuously slicing passing fruits
+	if swipe != "none" or move_dist > 18.0:
 		_perform_slice_segment(prev_pos, screen_pos, 105.0)
-	else:
-		_perform_slice(screen_pos, 85.0)
 
 func _add_trail_point(pos: Vector2) -> void:
 	trail_points.append(pos)
@@ -335,14 +356,20 @@ func _handle_fruit_sliced(f: ActiveFruit, slice_origin: Vector2) -> void:
 	f.half_r_vel = f.velocity * 0.5 + norm * 260.0 + Vector2(0, -120)
 	
 	if f.type == "bomb":
-		bombs_cut += 1
-		_spawn_playful_firecracker(f.pos)
-		AudioManager.play_sfx("bomb")
-		if bombs_cut < MAX_BOMBS_BEFORE_LOSS:
-			hud.set_instruction("💥 BOMB CUT! (%d/4) Careful! 4th bomb causes loss!" % bombs_cut)
+		var now_t := Time.get_ticks_msec() / 1000.0
+		if (now_t - last_bomb_slice_time) > 0.35:
+			last_bomb_slice_time = now_t
+			bombs_cut += 1
+			_spawn_playful_firecracker(f.pos)
+			AudioManager.play_sfx("bomb")
+			if bombs_cut < MAX_BOMBS_BEFORE_LOSS:
+				hud.set_instruction("💥 BOMB CUT! (%d/4) Careful! 4th bomb causes loss!" % bombs_cut)
+			else:
+				hud.set_instruction("💥 4TH BOMB CUT! Shinchan arrives with a challenge!")
+				_trigger_bomb_loss(f.pos)
 		else:
-			hud.set_instruction("💥 4TH BOMB CUT! Shinchan arrives with a challenge!")
-			_trigger_bomb_loss(f.pos)
+			# Visual spark for overlapping segment without double-counting bomb cut
+			_spawn_playful_firecracker(f.pos)
 	else:
 		fruits_sliced += 1
 		GameManager.level1_fruits_sliced = fruits_sliced
@@ -456,9 +483,9 @@ func _on_victory_continue_pressed() -> void:
 	GameManager.load_level(2) # Proceeds to Level 2: Waddle Wars!
 
 func _spawn_playful_firecracker(pos: Vector2) -> void:
+	AudioManager.play_sfx("bomb")
 	AudioManager.play_sfx("combo")
-	AudioManager.play_sfx("chime")
-	hud.set_instruction("✨ PLAYFUL FIRECRACKER BURST! 🎆 Confetti & colorful sparks fly!")
+	hud.set_instruction("✨ PLAYFUL FIRECRACKER BURST! 🎆 Colorful sparks and stars fly!")
 	
 	# Brief warm playful screen flash
 	var flash := ColorRect.new()
@@ -469,26 +496,43 @@ func _spawn_playful_firecracker(pos: Vector2) -> void:
 	tw_f.tween_property(flash, "color:a", 0.0, 0.25)
 	tw_f.tween_callback(flash.queue_free)
 	
-	# 32 Colorful celebration sparks (firecracker confetti)
+	# Expanding explosion shockwave rings
+	for r_i in range(2):
+		var ring := Node2D.new()
+		ring.position = pos
+		ring.set_meta("is_ring", true)
+		ring.set_meta("radius", 25.0)
+		ring.set_meta("color", Color(1.0, 0.85, 0.3) if r_i == 0 else Color(1.0, 0.3, 0.6))
+		splash_container.add_child(ring)
+		var tw_r := create_tween()
+		tw_r.tween_property(ring, "scale", Vector2.ZERO, 0.45).from(Vector2.ONE)
+		tw_r.parallel().tween_method(func(v: float): ring.set_meta("radius", v), 20.0, 120.0 + r_i * 40.0, 0.45)
+		tw_r.tween_callback(ring.queue_free)
+	
+	# 36 Colorful celebration sparks (star-shaped firecracker particles)
 	var colors := [
 		Color(1.0, 0.85, 0.2), # Gold
 		Color(1.0, 0.25, 0.75), # Neon Magenta
 		Color(0.2, 0.95, 0.9), # Turquoise
 		Color(0.4, 1.0, 0.3), # Lime
-		Color(1.0, 0.5, 0.1) # Bright Orange
+		Color(1.0, 0.5, 0.1), # Bright Orange
+		Color(0.8, 0.4, 1.0) # Violet
 	]
-	for i in range(32):
+	for i in range(36):
 		var spark := Node2D.new()
 		spark.position = pos
 		var angle := randf() * TAU
-		var spd := randf_range(160.0, 480.0)
+		var spd := randf_range(160.0, 520.0)
 		var vel := Vector2.from_angle(angle) * spd
 		spark.set_meta("vel", vel)
 		spark.set_meta("color", colors[i % colors.size()])
+		spark.set_meta("is_star", true)
+		spark.set_meta("rot", randf() * TAU)
+		spark.set_meta("rot_spd", randf_range(-8.0, 8.0))
 		splash_container.add_child(spark)
 		
 		var tw := create_tween()
-		var target := pos + vel * randf_range(0.45, 0.7)
+		var target := pos + vel * randf_range(0.45, 0.75)
 		tw.tween_property(spark, "position", target, 0.65).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 		tw.parallel().tween_property(spark, "scale", Vector2.ZERO, 0.65)
 		tw.tween_callback(spark.queue_free)
@@ -583,11 +627,28 @@ func _draw_arena_canvas() -> void:
 			_draw_half_fruit(f.half_l_pos, f.type, true)
 			_draw_half_fruit(f.half_r_pos, f.type, false)
 
-	# G. Active Splash Drops & Glow Rings
+	# G. Active Splash Drops & Colorful Firecracker Stars / Shockwave Rings
 	for s in splash_container.get_children():
 		var col: Color = s.get_meta("color", Color.ORANGE)
-		arena_canvas.draw_circle(s.position, 7.0 * s.scale.x, col)
-		arena_canvas.draw_circle(s.position, 12.0 * s.scale.x, Color(col.r, col.g, col.b, 0.35))
+		var sc: float = s.scale.x
+		if s.get_meta("is_ring", false):
+			var r_rad: float = s.get_meta("radius", 25.0)
+			arena_canvas.draw_arc(s.position, r_rad, 0.0, TAU, 28, Color(col.r, col.g, col.b, sc * 0.9), 4.5 * sc)
+			arena_canvas.draw_arc(s.position, r_rad * 0.85, 0.0, TAU, 24, Color(1.0, 1.0, 1.0, sc * 0.7), 2.5 * sc)
+		elif s.get_meta("is_star", false):
+			var star_r := 14.0 * sc
+			var rot: float = s.get_meta("rot", 0.0) + time_elapsed * s.get_meta("rot_spd", 4.0)
+			var star_pts := PackedVector2Array()
+			for pt in range(10):
+				var a := rot + pt * (PI / 5.0)
+				var r := star_r if (pt % 2 == 0) else (star_r * 0.42)
+				star_pts.append(s.position + Vector2(cos(a), sin(a)) * r)
+			arena_canvas.draw_colored_polygon(star_pts, col)
+			arena_canvas.draw_circle(s.position, star_r * 0.35, Color.WHITE)
+			arena_canvas.draw_circle(s.position, star_r * 1.6, Color(col.r, col.g, col.b, 0.3 * sc))
+		else:
+			arena_canvas.draw_circle(s.position, 7.0 * sc, col)
+			arena_canvas.draw_circle(s.position, 12.0 * sc, Color(col.r, col.g, col.b, 0.35))
 
 	# H. Glowing Ninja Blade Reticle (Follows Player's Hand)
 	if not level_finished and hand_cursor != Vector2.ZERO:

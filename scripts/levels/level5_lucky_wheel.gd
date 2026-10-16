@@ -50,14 +50,15 @@ var outcome_textures: Dictionary = {
 	6: preload("res://assets/sprites/outcome_robot_dance.png")
 }
 
-# Round Phases (Exactly 20-Second Master Timeline)
+# Round Phases (Strict 20-Second Master Timeline)
 enum Phase {
-	INTRO_SPIN,        # 0.0 - 3.0s (Smooth wheel spin & selection)
-	CHALLENGE_PHASE,   # 3.0 - 18.0s (Selected challenge / activity, max 15s)
-	RESULT_PHASE       # 18.0 - 20.0s (Result reveal & transition)
+	INTRO_SHOW,        # 0.0 - 3.0s (Show wheel and introduce challenge)
+	WHEEL_SPIN,        # 3.0 - 6.0s (Spin wheel visibly & settle on selected sector)
+	CHALLENGE_PHASE,   # 6.0 - 18.0s (Perform selected challenge with live webcam tracker)
+	RESULT_PHASE       # 18.0 - 20.0s (Show result & transition to Surprise Wonderland)
 }
 
-var current_phase: Phase = Phase.INTRO_SPIN
+var current_phase: Phase = Phase.INTRO_SHOW
 var time_elapsed: float = 0.0
 const TOTAL_ROUND_TIME: float = 20.0
 var level_finished: bool = false
@@ -100,7 +101,7 @@ func _ready() -> void:
 	_init_carnival_decorations()
 	
 	AudioManager.play_voice_file("res://assets/audio/lumi_level5.wav",
-		"Step right up to the Lucky Chaos Wheel! Spin for wild prizes and hilarious surprises for the next 30 seconds!", 5.0)
+		"Step right up to the Lucky Chaos Wheel! Spin for wild prizes and hilarious surprises for the next 20 seconds!", 5.0)
 
 func _init_carnival_decorations() -> void:
 	bunting_flags.clear()
@@ -118,12 +119,15 @@ func _process(delta: float) -> void:
 	var time_remaining := maxf(0.0, TOTAL_ROUND_TIME - time_elapsed)
 	hud.set_timer(time_remaining)
 
-	# Master State Machine (Exactly 20-Second Total Session)
-	# 0.0 - 3.0s: Spin phase
-	# 3.0 - 18.0s: Challenge phase (up to 15s)
-	# 18.0 - 20.0s: Result reveal & transition
+	# Master State Machine (Strict 20-Second Timeline)
+	# 0.0 - 3.0s: Intro Show (player can spin, or auto-spins at 3.0s)
+	# 3.0 - 6.0s: Wheel Spin (3-second visible spin settling on target sector)
+	# 6.0 - 18.0s: Challenge Phase (12-second live webcam activity)
+	# 18.0 - 20.0s: Result Phase & Transition to Surprise Wonderland
 	if time_elapsed < 3.0:
-		_process_intro_spin_phase(delta)
+		_process_intro_show_phase(delta)
+	elif time_elapsed < 6.0:
+		_process_wheel_spin_phase(delta)
 	elif time_elapsed < 18.0:
 		if not result_displayed:
 			_process_challenge_phase(delta)
@@ -144,41 +148,46 @@ func _process(delta: float) -> void:
 		carnival_canvas.queue_redraw()
 
 # ------------------------------------------------------------------------------
-# PHASE 1: INTRO & SPIN (0.0 to 3.0s)
+# PHASE 1: INTRO SHOW (0.0 to 3.0s)
 # ------------------------------------------------------------------------------
-func _process_intro_spin_phase(delta: float) -> void:
-	current_phase = Phase.INTRO_SPIN
-	
-	# If player hasn't spun after 0.5s, auto-spin so spin completes smoothly by 2.9s
-	if not is_spinning and time_elapsed >= 0.5 and target_slice_idx == 0 and wheel_angle == 0.0:
+func _process_intro_show_phase(_delta: float) -> void:
+	current_phase = Phase.INTRO_SHOW
+	if time_elapsed >= 3.0 and not is_spinning:
 		_start_wheel_spin()
 
-	if is_spinning:
-		spin_time_elapsed += delta
-		var t := clampf(spin_time_elapsed / spin_duration, 0.0, 1.0)
-		var ease_t := 1.0 - pow(1.0 - t, 3.0)
-		wheel_angle = lerpf(0.0, target_angle, ease_t)
+# ------------------------------------------------------------------------------
+# PHASE 2: WHEEL SPIN (3.0 to 6.0s)
+# ------------------------------------------------------------------------------
+func _process_wheel_spin_phase(delta: float) -> void:
+	current_phase = Phase.WHEEL_SPIN
+	if not is_spinning:
+		_start_wheel_spin()
+
+	spin_time_elapsed += delta
+	var t := clampf(spin_time_elapsed / spin_duration, 0.0, 1.0)
+	var ease_t := 1.0 - pow(1.0 - t, 3.0)
+	wheel_angle = lerpf(0.0, target_angle, ease_t)
+	if wheel_disc:
+		wheel_disc.rotation = wheel_angle
+
+	if pointer_sprite:
+		pointer_sprite.rotation = sin(spin_time_elapsed * 28.0 * (1.0 - t)) * 0.12
+
+	# Click audio ticks
+	if fmod(wheel_angle, TAU / 5.0) < 0.25:
+		AudioManager.play_sfx("wheel_click")
+
+	if t >= 1.0:
+		is_spinning = false
+		wheel_angle = target_angle
 		if wheel_disc:
-			wheel_disc.rotation = wheel_angle
-
+			wheel_disc.rotation = target_angle
 		if pointer_sprite:
-			pointer_sprite.rotation = sin(spin_time_elapsed * 32.0 * (1.0 - t)) * 0.12
-
-		# Click audio ticks
-		if fmod(wheel_angle, TAU / 7.0) < 0.2:
-			AudioManager.play_sfx("wheel_click")
-
-		if t >= 1.0:
-			is_spinning = false
-			wheel_angle = target_angle
-			if wheel_disc:
-				wheel_disc.rotation = target_angle
-			if pointer_sprite:
-				pointer_sprite.rotation = 0.0
-			_on_wheel_stopped()
+			pointer_sprite.rotation = 0.0
+		_on_wheel_stopped()
 
 # ------------------------------------------------------------------------------
-# PHASE 2: 15-SECOND CHALLENGE PHASE (3.0 to 18.0s)
+# PHASE 3: 12-SECOND CHALLENGE PHASE (6.0 to 18.0s)
 # ------------------------------------------------------------------------------
 func _process_challenge_phase(_delta: float) -> void:
 	if current_phase != Phase.CHALLENGE_PHASE:
@@ -225,7 +234,7 @@ func _process_result_phase(_delta: float) -> void:
 # WHEEL INTERACTION & SPIN TRIGGER
 # ------------------------------------------------------------------------------
 func _on_spin_btn_pressed() -> void:
-	if is_spinning or current_phase != Phase.INTRO_SPIN or level_finished:
+	if is_spinning or current_phase != Phase.INTRO_SHOW or level_finished:
 		return
 	_start_wheel_spin()
 
@@ -234,7 +243,7 @@ func _start_wheel_spin() -> void:
 		return
 	is_spinning = true
 	spin_time_elapsed = 0.0
-	spin_duration = 3.6
+	spin_duration = 3.0
 	
 	spin_btn.disabled = true
 	
@@ -242,9 +251,28 @@ func _start_wheel_spin() -> void:
 	target_slice_idx = randi() % 7
 	GameManager.level5_wheel_outcome = SLICES[target_slice_idx]
 	
-	# Mathematically calculate angle so that slice `target_slice_idx` lands under the top pointer (-PI/2)
-	# Formula: (TAU * 5.0) + (7 - target_slice_idx) * (TAU / 7.0)
-	target_angle = (TAU * 5.0) + ((7 - target_slice_idx) % 7) * (TAU / 7.0)
+	# The 5 visual sectors on the disc:
+	# Sector 0 (Top / 12 o'clock): Silly Dance / Robot Dance (0 rad)
+	# Sector 1 (Top-Right): Funny Face (2*PI/5 rad = 72 deg)
+	# Sector 2 (Bottom-Right): Hands Up! (4*PI/5 rad = 144 deg)
+	# Sector 3 (Bottom-Left): Penguin Waddle (6*PI/5 rad = 216 deg)
+	# Sector 4 (Top-Left): Wiggle Attack (8*PI/5 rad = 288 deg)
+	# Rotating clockwise by (TAU - phi) brings the sector to 12 o'clock pointer!
+	var sector_phi: float = 0.0
+	match target_slice_idx:
+		0, 3: # Lucky Pen, Keychain Quest -> Wiggle Attack
+			sector_phi = 8.0 * PI / 5.0
+		1, 2: # Chocolate, Sticker Blast -> Hands Up!
+			sector_phi = 4.0 * PI / 5.0
+		4: # Funny Actions -> Funny Face
+			sector_phi = 2.0 * PI / 5.0
+		5: # Chicken Dance -> Penguin Waddle
+			sector_phi = 6.0 * PI / 5.0
+		6: # Robot Dance -> Silly Dance
+			sector_phi = 0.0
+			
+	var landing_offset := fmod(TAU - sector_phi, TAU)
+	target_angle = (TAU * 5.0) + landing_offset
 	
 	AudioManager.play_sfx("wheel_click")
 	hud.set_instruction("🎡 The Lucky Chaos Wheel is spinning! Where will it land?")
@@ -262,57 +290,53 @@ func _activate_outcome_ui() -> void:
 	
 	match target_slice_idx:
 		0:
-			event_title.text = "LUCKY PEN 🖊️"
-			event_desc.text = "You won the Whimsical Pen! Sparkling with creative inspiration!"
-			active_challenge_name = "pen"
+			event_title.text = "LUCKY PEN 🖊️ — WIGGLE ATTACK!"
+			event_desc.text = "Wiggle both hands quickly for 5 seconds to claim your Whimsical Pen!"
+			active_challenge_name = "wiggle_attack"
 			AudioManager.play_sfx("crystal")
-			hud.set_instruction("🖊️ Lucky Pen won! Enjoy your 20-second prize reveal!")
+			hud.set_instruction("👋 Wiggle both hands quickly to claim your Lucky Pen!")
 		1:
-			event_title.text = "CHOCOLATE SURPRISE 🍫"
-			event_desc.text = "Delicious sweet chocolate prize awarded! Savor your carnival treat!"
-			active_challenge_name = "chocolate"
+			event_title.text = "CHOCOLATE SURPRISE 🍫 — HANDS UP!"
+			event_desc.text = "Raise both hands high to celebrate your Chocolate Surprise!"
+			active_challenge_name = "hands_up"
 			AudioManager.play_sfx("combo")
-			hud.set_instruction("🍫 Chocolate Surprise won! Savor your 20-second sweet reward!")
+			hud.set_instruction("🙌 Raise both hands high to claim your Chocolate treat!")
 		2:
-			event_title.text = "STICKER BLAST 🌈"
-			event_desc.text = "Rainbow sticker blast unlocked! Sparkling carnival stickers burst across the screen!"
-			active_challenge_name = "stickers"
+			event_title.text = "STICKER BLAST 🌈 — HANDS UP!"
+			event_desc.text = "Raise both hands high to trigger the Rainbow Sticker Blast!"
+			active_challenge_name = "hands_up"
 			AudioManager.play_sfx("chime")
-			hud.set_instruction("🌈 Sticker Blast unlocked! 20-second sticker celebration!")
+			hud.set_instruction("🙌 Raise both hands high to trigger Sticker Blast!")
 		3:
-			event_title.text = "KEYCHAIN QUEST 🔑"
-			event_desc.text = "Adorable lucky carnival cat keychain won! A charming keepsake for your journey!"
-			active_challenge_name = "keychain"
+			event_title.text = "KEYCHAIN QUEST 🔑 — WIGGLE ATTACK!"
+			event_desc.text = "Wiggle both hands quickly to win the Lucky Carnival Keychain!"
+			active_challenge_name = "wiggle_attack"
 			AudioManager.play_sfx("crystal")
-			hud.set_instruction("🔑 Keychain Quest won! 20-second souvenir reveal!")
+			hud.set_instruction("👋 Wiggle both hands quickly for your Keychain!")
 		4:
-			event_title.text = "FUNNY ACTIONS 😂"
-			event_desc.text = "Do a silly pose, funny face, or tilt your head! (Full 20-Second Challenge!)"
+			event_title.text = "FUNNY ACTIONS 😂 — FUNNY FACE!"
+			event_desc.text = "Make a silly face and hold it for 3 seconds!"
 			active_challenge_name = "funny_actions"
 			AudioManager.play_sfx("boing")
-			hud.set_instruction("😂 Strike silly poses and funny faces for 20 seconds!")
+			hud.set_instruction("😂 Make a silly face and hold it for 3 seconds!")
 		5:
-			event_title.text = "CHICKEN DANCE 🐔"
-			event_desc.text = "Flap your arms like chicken wings, wiggle your body & dance! (Full 20 Seconds!)"
+			event_title.text = "CHICKEN DANCE 🐔 — PENGUIN WADDLE!"
+			event_desc.text = "Move like a penguin from side to side or flap like a chicken!"
 			active_challenge_name = "chicken_dance"
 			AudioManager.play_sfx("quack")
-			hud.set_instruction("🐔 Flap your wings & wiggle your body for 20 seconds!")
+			hud.set_instruction("🐧 Move like a penguin from side to side!")
 			_spawn_ducks()
 		6:
-			event_title.text = "ROBOT DANCE 🤖"
-			event_desc.text = "Move with stiff arms, robotic steps, and funny robotic poses! (Full 20 Seconds!)"
+			event_title.text = "ROBOT DANCE 🤖 — SILLY DANCE!"
+			event_desc.text = "Move and dance with stiff robotic moves for 5 seconds!"
 			active_challenge_name = "robot_dance"
 			AudioManager.play_sfx("boing")
-			hud.set_instruction("🤖 Move with stiff arms & robotic poses for 20 seconds!")
+			hud.set_instruction("🤖 Move and dance with stiff robotic moves!")
 
 func _trigger_celebration_effects() -> void:
 	AudioManager.play_sfx("combo")
-	if active_challenge_name in ["chicken_dance", "robot_dance", "funny_actions"]:
-		event_title.text = "CHALLENGE CONQUERED! 🎉"
-		event_desc.text = "Spectacular carnival performance! The crowd cheers wildly for your energy!"
-	else:
-		event_title.text = "PRIZE CLAIMED! 🌟"
-		event_desc.text = "Awesome! Your prize has been officially recorded in your Memory Scrapbook!"
+	event_title.text = "CHALLENGE CONQUERED! 🎉"
+	event_desc.text = "Spectacular carnival performance! The crowd cheers wildly for your energy!"
 
 func _spawn_ducks() -> void:
 	for i in range(12):
@@ -328,14 +352,15 @@ func _on_hand_detected(cursor_pos: Vector2, swipe: String, waving: bool, _wave_s
 	if level_finished:
 		return
 		
-	if current_phase == Phase.CHALLENGE_PHASE and waving and pose_feedback_timer <= 0.0:
-		pose_feedback_timer = 0.8
-		AudioManager.play_sfx("boing")
-		hud.set_instruction("✨ Wiggle Attack recognized! Hands moving fast! Keep wiggling!")
-		_show_final_result(true)
-		return
+	if current_phase == Phase.CHALLENGE_PHASE and pose_feedback_timer <= 0.0:
+		if (active_challenge_name == "wiggle_attack" and waving) or (active_challenge_name in ["pen", "keychain"] and waving):
+			pose_feedback_timer = 0.8
+			AudioManager.play_sfx("boing")
+			hud.set_instruction("✨ Wiggle Attack recognized! Hands moving fast! You got it!")
+			_show_final_result(true)
+			return
 
-	if is_spinning or current_phase != Phase.INTRO_SPIN:
+	if is_spinning or current_phase != Phase.INTRO_SHOW:
 		return
 
 	var now := Time.get_ticks_msec() / 1000.0
@@ -371,10 +396,15 @@ func _on_pose_detected(gest: String, lean: String, _amt: float, hr: bool, ae: bo
 	if current_phase != Phase.CHALLENGE_PHASE or pose_feedback_timer > 0.0:
 		return
 
-	if active_challenge_name == "chicken_dance" and (cd or gest in ["chicken_dance", "dance"] or ae):
+	if active_challenge_name in ["hands_up", "stickers", "chocolate"] and hr:
+		pose_feedback_timer = 0.8
+		AudioManager.play_sfx("combo")
+		hud.set_instruction("🙌 Hands Up! Pose held high! Challenge conquered!")
+		_show_final_result(true)
+	elif active_challenge_name == "chicken_dance" and (cd or gest in ["chicken_dance", "dance"] or ae or lean != "neutral"):
 		pose_feedback_timer = 0.8
 		AudioManager.play_sfx("quack")
-		hud.set_instruction("🐔 Great chicken dance flapping! Keep wiggling!")
+		hud.set_instruction("🐧 Penguin Waddle & Chicken Dance recognized! Great moves!")
 		_show_final_result(true)
 	elif active_challenge_name == "robot_dance" and (ae or hr or gest in ["arms_extended", "hero_pose"]):
 		pose_feedback_timer = 0.8
