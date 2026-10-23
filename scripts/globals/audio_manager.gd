@@ -20,6 +20,8 @@ var is_muted: bool = false
 # Procedural sound cache
 var procedural_sounds: Dictionary = {}
 
+const BACKGROUND_MUSIC_PATH := "res://assets/audio/jonasblakewood-ambient-ambient-music-593998.mp3"
+
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	
@@ -222,24 +224,15 @@ func stop_music() -> void:
 	if music_player.playing:
 		music_player.stop()
 
-func play_music_procedural(theme: String) -> void:
+func play_background_music() -> void:
 	if is_muted or music_player.playing:
 		return
-	# Cheerful party synth arpeggio progression (C - G - Am - F)
-	var chord_c := [261.63, 329.63, 392.0, 523.25]
-	var chord_g := [196.0, 246.94, 293.66, 392.0]
-	var chord_am := [220.0, 261.63, 329.63, 440.0]
-	var chord_f := [174.61, 220.0, 261.63, 349.23]
-	var all_notes := []
-	for c in [chord_c, chord_g, chord_am, chord_f]:
-		for n in c:
-			all_notes.append(n)
-	var bgm_stream := _synth_tone_sequence(all_notes, 0.18, 0.25)
-	bgm_stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
-	bgm_stream.loop_end = bgm_stream.data.size() / 2
-	music_player.stream = bgm_stream
-	music_player.volume_db = linear_to_db(music_volume * master_volume)
-	music_player.play()
+	play_music_file(BACKGROUND_MUSIC_PATH, 0.75, true)
+
+func play_music_procedural(_theme: String = "") -> void:
+	if is_muted or music_player.playing:
+		return
+	play_music_file(BACKGROUND_MUSIC_PATH, 0.75, true)
 
 func set_master_volume(v: float) -> void:
 	master_volume = clampf(v, 0.0, 1.0)

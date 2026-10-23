@@ -19,7 +19,7 @@ extends Control
 @onready var dialogue_label: Label = $DialoguePanel/Margin/Label
 @onready var final_message_label: Label = $FinalMessageLabel
 @onready var reward_screen: PanelContainer = $RewardScreen
-@onready var cards_container: HBoxContainer = $RewardScreen/Margin/VBox/Scroll/CardsContainer
+@onready var cards_container: HBoxContainer = get_node_or_null("RewardScreen/Margin/VBox/Scroll/CardsContainer")
 
 enum CinematicState {
 	OPENING_SURPRISE,
@@ -250,83 +250,10 @@ func _enter_state(new_state: CinematicState) -> void:
 			AudioManager.play_sfx("legend_fanfare")
 
 func _populate_scrapbook_cards() -> void:
-	if not cards_container:
-		return
-	for c in cards_container.get_children():
-		c.queue_free()
-		
-	for i in range(1, 6):
-		var mem: Dictionary = MEMORIES[i]
-		var unlocked: bool = true
-		if StickerManager:
-			unlocked = StickerManager.is_sticker_unlocked(i)
-		var st_data: Dictionary = {}
-		if StickerManager:
-			st_data = StickerManager.get_sticker_data(i)
-			
-		var card_panel := PanelContainer.new()
-		card_panel.custom_minimum_size = Vector2(210, 340)
-		
-		var sb := StyleBoxFlat.new()
-		if unlocked:
-			sb.bg_color = Color(1.0, 0.98, 0.95, 0.96)
-			sb.border_color = Color(0.92, 0.65, 0.78, 1.0)
-			sb.set_border_width_all(3)
-			sb.shadow_color = Color(0.85, 0.65, 0.75, 0.35)
-			sb.shadow_size = 8
-		else:
-			sb.bg_color = Color(0.92, 0.90, 0.94, 0.85)
-			sb.border_color = Color(0.75, 0.72, 0.80, 0.8)
-			sb.set_border_width_all(2)
-			sb.shadow_color = Color(0.6, 0.6, 0.65, 0.15)
-			sb.shadow_size = 4
-		sb.set_corner_radius_all(16)
-		card_panel.add_theme_stylebox_override("panel", sb)
-		
-		var margin := MarginContainer.new()
-		margin.add_theme_constant_override("margin_left", 12)
-		margin.add_theme_constant_override("margin_top", 10)
-		margin.add_theme_constant_override("margin_right", 12)
-		margin.add_theme_constant_override("margin_bottom", 10)
-		card_panel.add_child(margin)
-		
-		var vbox := VBoxContainer.new()
-		vbox.add_theme_constant_override("separation", 6)
-		margin.add_child(vbox)
-		
-		var tag_lbl := Label.new()
-		tag_lbl.text = mem["tag"]
-		tag_lbl.add_theme_font_size_override("font_size", 11)
-		tag_lbl.add_theme_color_override("font_color", Color(0.85, 0.45, 0.65) if unlocked else Color(0.55, 0.55, 0.60))
-		tag_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		vbox.add_child(tag_lbl)
-		
-		var icon_rect := TextureRect.new()
-		icon_rect.custom_minimum_size = Vector2(100, 100)
-		icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		var icon_path: String = st_data.get("icon", mem["icon"])
-		if ResourceLoader.exists(icon_path):
-			icon_rect.texture = load(icon_path)
-		icon_rect.modulate = Color.WHITE if unlocked else Color(0.4, 0.4, 0.45, 0.6)
-		vbox.add_child(icon_rect)
-		
-		var title_lbl := Label.new()
-		title_lbl.text = mem["title"] if unlocked else "🔒 LOCKED"
-		title_lbl.add_theme_font_size_override("font_size", 14)
-		title_lbl.add_theme_color_override("font_color", Color(0.25, 0.15, 0.22) if unlocked else Color(0.5, 0.5, 0.55))
-		title_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		vbox.add_child(title_lbl)
-		
-		var desc_lbl := Label.new()
-		desc_lbl.text = mem["memory"] if unlocked else "Complete %s to unlock this memory!" % mem["level"]
-		desc_lbl.add_theme_font_size_override("font_size", 11)
-		desc_lbl.add_theme_color_override("font_color", Color(0.4, 0.35, 0.42) if unlocked else Color(0.6, 0.6, 0.65))
-		desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		desc_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		vbox.add_child(desc_lbl)
-		
-		cards_container.add_child(card_panel)
+	# Obsolete 5-level cards container permanently bypassed in favor of clean 3-level scrapbook
+	if cards_container:
+		for c in cards_container.get_children():
+			c.queue_free()
 
 func _on_scrapbook_pressed() -> void:
 	AudioManager.play_sfx("chime")
@@ -345,6 +272,8 @@ func _on_menu_pressed() -> void:
 # INTERACTIVE GESTURE HANDLERS (HAND MOTION -> BUTTERFLIES, SMILE -> FLOWERS)
 # ------------------------------------------------------------------------------
 func _on_hand_detected(cursor_pos: Vector2, _swipe: String, _waving: bool, _wave_spd: float, _reach: bool, _open: bool, _fist: bool) -> void:
+	if dialogue_panel and dialogue_panel.visible:
+		return
 	var screen_pos := Vector2(cursor_pos.x * 1280.0, cursor_pos.y * 720.0)
 	if last_hand_pos.distance_to(screen_pos) > 35.0:
 		last_hand_pos = screen_pos
@@ -415,23 +344,8 @@ func _draw_wonderland() -> void:
 		wonderland_canvas.draw_line(Vector2(star_x, star_y - 6), Vector2(star_x, star_y + 6), star_col, 1.2)
 
 	# D. Characters Gathered Together in Surprise Wonderland
-	# The background image already features the angel, baby penguin, and Shin Chan illustrated together.
-	# We draw Lumi the magical fairy guide hovering above with her glowing wand and shimmering aura.
-	if current_state >= CinematicState.SCENE_B_EVERYONE_APPEARS:
-		# Magical Guide Fairy Lumi (Hovering on Upper Left with Wand)
-		var lumi_pos := Vector2(460.0, 240.0 + sin(time_elapsed * 3.5) * 14.0)
-		var aura_glow := Color(1.0, 0.95, 0.7, 0.40 + sin(time_elapsed * 6.0) * 0.15)
-		wonderland_canvas.draw_circle(lumi_pos, 36.0, aura_glow)
-		wonderland_canvas.draw_circle(lumi_pos, 24.0, Color(1.0, 1.0, 0.85, 0.6))
-		var wing_f := sin(time_elapsed * 12.0) * 6.0
-		wonderland_canvas.draw_ellipse(lumi_pos + Vector2(-18, -8), 14.0, 22.0 + wing_f, Color(0.85, 0.95, 1.0, 0.75))
-		wonderland_canvas.draw_ellipse(lumi_pos + Vector2(18, -8), 14.0, 22.0 + wing_f, Color(0.85, 0.95, 1.0, 0.75))
-		wonderland_canvas.draw_ellipse(lumi_pos + Vector2(0, 10), 11.0, 16.0, Color(0.55, 0.88, 0.98))
-		wonderland_canvas.draw_circle(lumi_pos + Vector2(0, -9), 12.0, Color(1.0, 0.90, 0.82))
-		wonderland_canvas.draw_circle(lumi_pos + Vector2(-4, -11), 2.0, Color(0.2, 0.4, 0.7))
-		wonderland_canvas.draw_circle(lumi_pos + Vector2(4, -11), 2.0, Color(0.2, 0.4, 0.7))
-		wonderland_canvas.draw_line(lumi_pos + Vector2(10, 6), lumi_pos + Vector2(26, -6), Color.GOLD, 2.5)
-		wonderland_canvas.draw_circle(lumi_pos + Vector2(26, -6), 4.5, Color.WHITE)
+	# The background artwork already features the angel girl Lumi in the center, baby penguin on the left,
+	# and Shin Chan on the right. No procedural figures or covering overlays are drawn over them.
 
 	# E. Interactive Blooming Flowers (Spawned by Smiling)
 	for fl in interactive_flowers:

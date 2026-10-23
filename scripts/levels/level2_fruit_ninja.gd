@@ -361,11 +361,12 @@ func _handle_fruit_sliced(f: ActiveFruit, slice_origin: Vector2) -> void:
 			last_bomb_slice_time = now_t
 			bombs_cut += 1
 			_spawn_playful_firecracker(f.pos)
+			_show_bomb_blast_popup(f.pos, bombs_cut)
 			AudioManager.play_sfx("bomb")
 			if bombs_cut < MAX_BOMBS_BEFORE_LOSS:
-				hud.set_instruction("💥 BOMB CUT! (%d/4) Careful! 4th bomb causes loss!" % bombs_cut)
+				hud.set_instruction("💥 BOMB BLASTED: %d" % bombs_cut)
 			else:
-				hud.set_instruction("💥 4TH BOMB CUT! Shinchan arrives with a challenge!")
+				hud.set_instruction("💥 BOMB BLASTED: 4! Shinchan arrives with a challenge!")
 				_trigger_bomb_loss(f.pos)
 		else:
 			# Visual spark for overlapping segment without double-counting bomb cut
@@ -449,14 +450,22 @@ func _conclude_shinchan_challenge(won: bool) -> void:
 		return
 	shinchan_concluded = true
 	if won:
+		var title_lbl: Label = get_node_or_null("BombLossOverlay/Card/Margin/HBox/VBox/Title")
+		if title_lbl:
+			title_lbl.text = "SUCCESSFULLY COMPLETED! 🎉"
+			title_lbl.add_theme_color_override("font_color", Color(0.18, 0.1, 0.22, 1))
 		if bubble_text:
-			bubble_text.text = "YOU WON THE CHALLENGE! 🎉\nShinchan: \"Wahaha! Spot on! Off to Surprise Wonderland! 🌈\""
+			bubble_text.text = "Challenge Completed: Shin Chan Dialogue Challenge 🗣️✨\n• Speech Recognized: \"Chutti Paiyan!\" ✔\n• Shinchan: \"Wahaha! Spot on! You are a superstar! Off to Wonderland! 🌈\""
+			bubble_text.add_theme_color_override("font_color", Color(0.2, 0.12, 0.25, 1))
 		if speech_status_label:
-			speech_status_label.text = "Challenge Won! Transitioning to Surprise Wonderland..."
+			speech_status_label.text = "Spectacular speech match! Preparing your journey to Wonderland..."
+			speech_status_label.add_theme_color_override("font_color", Color(0.15, 0.38, 0.2, 1))
+		if wonderland_btn:
+			wonderland_btn.text = "CONTINUE ➔"
 		AudioManager.play_sfx("combo")
 	else:
 		if bubble_text:
-			bubble_text.text = "GREAT TRY! EVERY ATTEMPT MAKES YOU BETTER! 💗\nShinchan: \"Keep smiling and shining! Off to Wonderland! 🌸\""
+			bubble_text.text = "GREAT EFFORT! EVERY ATTEMPT MAKES YOU BETTER! 💗\nShinchan: \"Keep smiling and shining! Off to Wonderland! 🌸\""
 		if speech_status_label:
 			speech_status_label.text = "Great attempt! Transitioning to Surprise Wonderland..."
 		AudioManager.play_sfx("chime")
@@ -482,10 +491,32 @@ func _on_victory_continue_pressed() -> void:
 	GameManager.complete_level(1)
 	GameManager.load_level(2) # Proceeds to Level 2: Waddle Wars!
 
+func _show_bomb_blast_popup(pos: Vector2, count: int) -> void:
+	var popup_layer := CanvasLayer.new()
+	popup_layer.layer = 15
+	add_child(popup_layer)
+	
+	var lbl := Label.new()
+	lbl.text = "💥 BOMB BLASTED: %d" % count
+	lbl.add_theme_font_size_override("font_size", 36)
+	lbl.add_theme_color_override("font_color", Color(1.0, 0.25, 0.25))
+	lbl.add_theme_color_override("font_shadow_color", Color(0.15, 0.0, 0.05, 0.95))
+	lbl.add_theme_constant_override("shadow_offset_x", 3)
+	lbl.add_theme_constant_override("shadow_offset_y", 3)
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	lbl.size = Vector2(460, 60)
+	lbl.position = Vector2(clampf(pos.x - 230.0, 40.0, 800.0), clampf(pos.y - 70.0, 80.0, 560.0))
+	popup_layer.add_child(lbl)
+	
+	var tw := create_tween()
+	tw.tween_property(lbl, "position:y", lbl.position.y - 65.0, 1.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(lbl, "modulate:a", 0.0, 1.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.tween_callback(popup_layer.queue_free)
+
 func _spawn_playful_firecracker(pos: Vector2) -> void:
 	AudioManager.play_sfx("bomb")
 	AudioManager.play_sfx("combo")
-	hud.set_instruction("✨ PLAYFUL FIRECRACKER BURST! 🎆 Colorful sparks and stars fly!")
 	
 	# Brief warm playful screen flash
 	var flash := ColorRect.new()

@@ -26,9 +26,12 @@ extends Node2D
 @onready var spin_btn: Button = $StageUI/SpinBtn
 @onready var event_overlay: CanvasLayer = $EventOverlay
 @onready var event_title: Label = $EventOverlay/Panel/Margin/VBox/EventTitle
+@onready var challenge_label: Label = get_node_or_null("EventOverlay/Panel/Margin/VBox/ChallengeLabel")
 @onready var outcome_icon: TextureRect = $EventOverlay/Panel/Margin/VBox/OutcomeIcon
+@onready var score_label: Label = get_node_or_null("EventOverlay/Panel/Margin/VBox/ScoreLabel")
 @onready var event_desc: Label = $EventOverlay/Panel/Margin/VBox/EventDesc
 @onready var countdown_label: Label = $EventOverlay/Panel/Margin/VBox/CountdownLabel
+@onready var continue_btn: Button = get_node_or_null("EventOverlay/Panel/Margin/VBox/ContinueBtn")
 
 const SLICES: Array[String] = [
 	"Silly Dance 🤖",
@@ -39,11 +42,11 @@ const SLICES: Array[String] = [
 ]
 
 var outcome_textures: Dictionary = {
-	0: preload("res://assets/sprites/outcome_robot_dance.png"),
-	1: preload("res://assets/sprites/outcome_funny_actions.png"),
-	2: preload("res://assets/sprites/outcome_sticker_blast.png"),
-	3: preload("res://assets/sprites/outcome_chicken_dance.png"),
-	4: preload("res://assets/sprites/outcome_pen.png")
+	0: preload("res://assets/sprites/challenge_silly_dance.png"),
+	1: preload("res://assets/sprites/challenge_funny_face.png"),
+	2: preload("res://assets/sprites/challenge_hands_up.png"),
+	3: preload("res://assets/sprites/challenge_penguin_waddle.png"),
+	4: preload("res://assets/sprites/challenge_wiggle_attack.png")
 }
 
 # Round Phases (Strict 20-Second Master Timeline)
@@ -78,6 +81,14 @@ var last_touch_time: float = -10.0
 # Active challenge tracking
 var active_challenge_name: String = ""
 var pose_feedback_timer: float = 0.0
+var challenge_progress: float = 0.0
+var challenge_target: float = 3.0
+var challenge_action_count: int = 0
+var last_lean_direction: String = "neutral"
+var is_active_pose_matching: bool = false
+var is_active_face_matching: bool = false
+var is_active_hand_matching: bool = false
+var last_matching_input_time: float = 0.0
 
 # Decorative carnival bunting flags
 var bunting_flags: Array[Dictionary] = []
@@ -185,14 +196,59 @@ func _process_wheel_spin_phase(delta: float) -> void:
 # ------------------------------------------------------------------------------
 # PHASE 3: 12-SECOND CHALLENGE PHASE (6.0 to 18.0s)
 # ------------------------------------------------------------------------------
-func _process_challenge_phase(_delta: float) -> void:
+func _process_challenge_phase(delta: float) -> void:
 	if current_phase != Phase.CHALLENGE_PHASE:
 		current_phase = Phase.CHALLENGE_PHASE
 		_activate_outcome_ui()
 
 	var phase_remaining := maxf(0.0, 18.0 - time_elapsed)
-	countdown_label.text = "⏳ Challenge Phase: %.1f seconds remaining" % phase_remaining
 	
+	# Input decay check
+	if time_elapsed - last_matching_input_time > 0.45:
+		is_active_pose_matching = false
+		is_active_face_matching = false
+		is_active_hand_matching = false
+
+	# Accumulate progress for continuous poses and gestures
+	match active_challenge_name:
+		"robot_dance":
+			if is_active_pose_matching:
+				challenge_progress += delta
+			countdown_label.text = "⏳ Time: %.1fs | 🤖 Robot Moves: %.1f / 3.0s" % [phase_remaining, minf(3.0, challenge_progress)]
+			if challenge_progress >= 3.0:
+				hud.set_instruction("✨ Silly Robot Dance completed! Fantastic robotic rhythm!")
+				_show_final_result(true)
+		"funny_actions":
+			if is_active_face_matching:
+				challenge_progress += delta
+			countdown_label.text = "⏳ Time: %.1fs | 😂 Silly Face: %.1f / 3.0s" % [phase_remaining, minf(3.0, challenge_progress)]
+			if challenge_progress >= 3.0:
+				hud.set_instruction("✨ Silly Face completed! What a delightfully silly face!")
+				_show_final_result(true)
+		"hands_up":
+			if is_active_pose_matching:
+				challenge_progress += delta
+			countdown_label.text = "⏳ Time: %.1fs | 🙌 Hands Up: %.1f / 3.0s" % [phase_remaining, minf(3.0, challenge_progress)]
+			if challenge_progress >= 3.0:
+				hud.set_instruction("✨ Hands Up completed! Reaching for the carnival sky!")
+				_show_final_result(true)
+		"chicken_dance":
+			if is_active_pose_matching:
+				challenge_progress += delta
+			countdown_label.text = "⏳ Time: %.1fs | 🐧 Waddles: %d / 4 (%.1fs)" % [phase_remaining, challenge_action_count, minf(3.0, challenge_progress)]
+			if challenge_action_count >= 4 or challenge_progress >= 3.0:
+				hud.set_instruction("✨ Penguin Waddle completed! Cutest arctic moves!")
+				_show_final_result(true)
+		"wiggle_attack":
+			if is_active_hand_matching:
+				challenge_progress += delta
+				if int(challenge_progress * 1.5) > challenge_action_count:
+					challenge_action_count = int(challenge_progress * 1.5)
+			countdown_label.text = "⏳ Time: %.1fs | 👋 Wiggles: %d / 4 (%.1fs)" % [phase_remaining, challenge_action_count, minf(3.0, challenge_progress)]
+			if challenge_action_count >= 4 or challenge_progress >= 3.0:
+				hud.set_instruction("✨ Wiggle Attack completed! Pure chaotic carnival energy!")
+				_show_final_result(true)
+
 	if outcome_icon:
 		var pulse := 1.0 + sin(time_elapsed * 4.0) * 0.05
 		outcome_icon.scale = Vector2(pulse, pulse)
@@ -209,13 +265,58 @@ func _show_final_result(success: bool) -> void:
 	event_overlay.visible = true
 	
 	if success:
-		event_title.text = "CHALLENGE SUCCESSFULLY COMPLETED! ✨"
-		event_desc.text = "Spectacular moves! Your victory is recorded in the Scrapbook!"
+		event_title.text = "SUCCESSFULLY COMPLETED! 🎉"
+		if challenge_label:
+			challenge_label.visible = true
+			challenge_label.text = "Challenge Completed: %s" % SLICES[target_slice_idx]
+		
+		if score_label:
+			score_label.visible = true
+			match target_slice_idx:
+				0:
+					score_label.text = "Robot Moves: 3.0s Dance Held ✔"
+				1:
+					score_label.text = "Silly Face: 3.0s Expression Registered ✔"
+				2:
+					score_label.text = "Pose Held: Both Hands High Raised ✔"
+				3:
+					score_label.text = "Waddle Count: Side-to-Side Flaps Completed ✔"
+				4:
+					score_label.text = "Wiggle Speed: Fast Wave Swipes Detected ✔"
+		
+		match target_slice_idx:
+			0:
+				event_desc.text = "Beep boop! Fantastic robotic rhythm and carnival energy!"
+			1:
+				event_desc.text = "Wahaha! What a delightfully silly face! The crowd loves it!"
+			2:
+				event_desc.text = "Woohoo! Reaching for the carnival sky with amazing cheer!"
+			3:
+				event_desc.text = "Quack & waddle! The cutest arctic moves at the carnival!"
+			4:
+				event_desc.text = "Incredible wiggle speed! Pure chaotic carnival champion energy!"
+		
+		if countdown_label:
+			countdown_label.visible = false
+		if continue_btn:
+			continue_btn.visible = true
+			continue_btn.text = "CONTINUE ➔"
+		
 		AudioManager.play_sfx("combo")
-		hud.set_instruction("✨ CHALLENGE SUCCESSFULLY COMPLETED! ✨")
+		hud.set_instruction("✨ Challenge Completed: %s! ✨" % SLICES[target_slice_idx])
 	else:
 		event_title.text = "YOU TRIED YOUR BEST! KEEP WIGGLING! 💗"
+		if challenge_label:
+			challenge_label.visible = true
+			challenge_label.text = "Challenge: %s" % SLICES[target_slice_idx]
+		if score_label:
+			score_label.visible = false
 		event_desc.text = "Great effort! Wonderful energy! Off to Surprise Wonderland!"
+		if countdown_label:
+			countdown_label.visible = true
+		if continue_btn:
+			continue_btn.visible = true
+			continue_btn.text = "CONTINUE ➔"
 		AudioManager.play_sfx("chime")
 		hud.set_instruction("YOU TRIED YOUR BEST! KEEP WIGGLING! 💗")
 
@@ -224,7 +325,8 @@ func _process_result_phase(_delta: float) -> void:
 		_show_final_result(challenge_success)
 		
 	var time_left := maxf(0.0, TOTAL_ROUND_TIME - time_elapsed)
-	countdown_label.text = "🌟 Off to Surprise Wonderland in %.1f seconds..." % time_left
+	if countdown_label and countdown_label.visible:
+		countdown_label.text = "🌟 Off to Surprise Wonderland in %.1f seconds..." % time_left
 
 # ------------------------------------------------------------------------------
 # WHEEL INTERACTION & SPIN TRIGGER
@@ -234,28 +336,27 @@ func _on_spin_btn_pressed() -> void:
 		return
 	_start_wheel_spin()
 
-func _start_wheel_spin() -> void:
+func set_target_sector(idx: int) -> void:
+	target_slice_idx = posmod(idx, 5)
+	GameManager.level5_wheel_outcome = SLICES[target_slice_idx]
+	var sector_phi: float = float(target_slice_idx) * (2.0 * PI / 5.0)
+	var landing_offset := fmod(TAU - sector_phi, TAU)
+	target_angle = (TAU * 5.0) + landing_offset
+
+func _start_wheel_spin(forced_sector: int = -1) -> void:
 	if is_spinning:
 		return
 	is_spinning = true
 	spin_time_elapsed = 0.0
 	spin_duration = 3.0
 	
-	spin_btn.disabled = true
+	if spin_btn:
+		spin_btn.disabled = true
 	
-	# Choose random outcome among the 5 visual sectors
-	target_slice_idx = randi() % 5
-	GameManager.level5_wheel_outcome = SLICES[target_slice_idx]
-	
-	# The 5 visual sectors on the disc:
-	# Sector 0 (Top / 12 o'clock): Silly Dance (0 rad)
-	# Sector 1 (Top-Right): Funny Face (2*PI/5 rad = 72 deg)
-	# Sector 2 (Bottom-Right): Hands Up! (4*PI/5 rad = 144 deg)
-	# Sector 3 (Bottom-Left): Penguin Waddle (6*PI/5 rad = 216 deg)
-	# Sector 4 (Top-Left): Wiggle Attack (8*PI/5 rad = 288 deg)
-	var sector_phi: float = float(target_slice_idx) * (2.0 * PI / 5.0)
-	var landing_offset := fmod(TAU - sector_phi, TAU)
-	target_angle = (TAU * 5.0) + landing_offset
+	if forced_sector >= 0:
+		set_target_sector(forced_sector)
+	else:
+		set_target_sector(randi() % 5)
 	
 	AudioManager.play_sfx("wheel_click")
 	hud.set_instruction("🎡 The Lucky Chaos Wheel is spinning! Where will it land?")
@@ -267,9 +368,28 @@ func _on_wheel_stopped() -> void:
 
 func _activate_outcome_ui() -> void:
 	event_overlay.visible = true
+	challenge_progress = 0.0
+	challenge_target = 3.0
+	challenge_action_count = 0
+	last_lean_direction = "neutral"
+	is_active_pose_matching = false
+	is_active_face_matching = false
+	is_active_hand_matching = false
+	last_matching_input_time = 0.0
+
 	if outcome_textures.has(target_slice_idx):
 		outcome_icon.texture = outcome_textures[target_slice_idx]
 		outcome_icon.pivot_offset = outcome_icon.size * 0.5
+	
+	if continue_btn:
+		continue_btn.visible = false
+	if score_label:
+		score_label.visible = false
+	if challenge_label:
+		challenge_label.visible = true
+		challenge_label.text = "🎡 Challenge in Progress..."
+	if countdown_label:
+		countdown_label.visible = true
 	
 	match target_slice_idx:
 		0:
@@ -304,6 +424,14 @@ func _activate_outcome_ui() -> void:
 			AudioManager.play_sfx("crystal")
 			hud.set_instruction("👋 Wiggle both hands quickly!")
 
+func _on_continue_pressed() -> void:
+	if level_finished:
+		return
+	level_finished = true
+	GameManager.level5_wheel_completed = true
+	GameManager.complete_level(5)
+	GameManager.load_secret_ending(true)
+
 func _trigger_celebration_effects() -> void:
 	AudioManager.play_sfx("combo")
 	event_title.text = "CHALLENGE CONQUERED! 🎉"
@@ -319,17 +447,21 @@ func _spawn_ducks() -> void:
 		tw.tween_callback(func(): AudioManager.play_sfx("quack"))
 
 # Hand Touch Navigation with Sensible Input Debounce
-func _on_hand_detected(cursor_pos: Vector2, swipe: String, waving: bool, _wave_spd: float, _reach: bool, _open: bool, _fist: bool) -> void:
+func _on_hand_detected(cursor_pos: Vector2, swipe: String, waving: bool, _wave_spd: float, reach_up: bool, _open: bool, _fist: bool) -> void:
 	if level_finished:
 		return
 		
-	if current_phase == Phase.CHALLENGE_PHASE and pose_feedback_timer <= 0.0:
-		if (active_challenge_name == "wiggle_attack" and waving) or (active_challenge_name in ["pen", "keychain"] and waving):
-			pose_feedback_timer = 0.8
-			AudioManager.play_sfx("boing")
-			hud.set_instruction("✨ Wiggle Attack recognized! Hands moving fast! You got it!")
-			_show_final_result(true)
-			return
+	if current_phase == Phase.CHALLENGE_PHASE:
+		if active_challenge_name == "wiggle_attack":
+			if waving or swipe != "none":
+				last_matching_input_time = time_elapsed
+				is_active_hand_matching = true
+				if swipe != "none":
+					challenge_action_count += 1
+					AudioManager.play_sfx("boing")
+		elif active_challenge_name == "hands_up" and reach_up:
+			last_matching_input_time = time_elapsed
+			is_active_pose_matching = true
 
 	if is_spinning or current_phase != Phase.INTRO_SHOW:
 		return
@@ -355,54 +487,39 @@ func _on_hand_detected(cursor_pos: Vector2, swipe: String, waving: bool, _wave_s
 		can_touch_spin = true
 
 func _on_face_detected(expr: String, _scores: Dictionary, _eye_sec: float) -> void:
-	if current_phase != Phase.CHALLENGE_PHASE or pose_feedback_timer > 0.0:
+	if current_phase != Phase.CHALLENGE_PHASE:
 		return
 	if active_challenge_name == "funny_actions" and expr != "neutral":
-		pose_feedback_timer = 0.8
-		AudioManager.play_sfx("boing")
-		hud.set_instruction("😂 Silly face recognized: %s! Fantastic expression!" % expr.to_upper())
-		_show_final_result(true)
+		last_matching_input_time = time_elapsed
+		is_active_face_matching = true
 
 func _on_pose_detected(gest: String, lean: String, _amt: float, hr: bool, ae: bool, sq: bool, cd: bool) -> void:
-	if current_phase != Phase.CHALLENGE_PHASE or pose_feedback_timer > 0.0:
+	if current_phase != Phase.CHALLENGE_PHASE:
 		return
 
-	if active_challenge_name in ["hands_up", "stickers", "chocolate"] and hr:
-		pose_feedback_timer = 0.8
-		AudioManager.play_sfx("combo")
-		hud.set_instruction("🙌 Hands Up! Pose held high! Challenge conquered!")
-		_show_final_result(true)
-	elif active_challenge_name == "chicken_dance" and (cd or gest in ["chicken_dance", "dance"] or ae or lean != "neutral"):
-		pose_feedback_timer = 0.8
-		AudioManager.play_sfx("quack")
-		hud.set_instruction("🐧 Penguin Waddle & Chicken Dance recognized! Great moves!")
-		_show_final_result(true)
-	elif active_challenge_name == "robot_dance" and (ae or hr or gest in ["arms_extended", "hero_pose"]):
-		pose_feedback_timer = 0.8
-		AudioManager.play_sfx("boing")
-		hud.set_instruction("🤖 Stiff robot moves recognized! Beep boop!")
-		_show_final_result(true)
-	elif active_challenge_name == "funny_actions":
-		if hr:
-			pose_feedback_timer = 0.8
-			AudioManager.play_sfx("combo")
-			hud.set_instruction("🙌 Hands Up! Pose held high!")
-			_show_final_result(true)
-		elif lean != "neutral":
-			pose_feedback_timer = 0.8
+	if active_challenge_name == "hands_up" and hr:
+		last_matching_input_time = time_elapsed
+		is_active_pose_matching = true
+	elif active_challenge_name == "chicken_dance":
+		if lean != "neutral" and lean != last_lean_direction:
+			last_lean_direction = lean
+			challenge_action_count += 1
 			AudioManager.play_sfx("quack")
-			hud.set_instruction("🐧 Penguin Waddle from side to side recognized!")
-			_show_final_result(true)
-		elif sq or gest != "neutral":
-			pose_feedback_timer = 0.8
-			AudioManager.play_sfx("boing")
-			hud.set_instruction("😂 Silly carnival action recognized! Wahaha!")
-			_show_final_result(true)
+		if cd or gest in ["chicken_dance", "dance"] or ae or sq or lean != "neutral":
+			last_matching_input_time = time_elapsed
+			is_active_pose_matching = true
+	elif active_challenge_name == "robot_dance":
+		if ae or hr or gest in ["arms_extended", "hero_pose", "robot_dance", "dance"]:
+			last_matching_input_time = time_elapsed
+			is_active_pose_matching = true
+	elif active_challenge_name == "funny_actions":
+		if hr or lean != "neutral" or sq or gest != "neutral":
+			last_matching_input_time = time_elapsed
+			is_active_face_matching = true
 
 func _on_level_timer_complete() -> void:
 	if level_finished:
 		return
-	level_finished = true
 	
 	if not result_displayed:
 		_show_final_result(challenge_success)
@@ -410,12 +527,11 @@ func _on_level_timer_complete() -> void:
 	hud.set_instruction("TIME'S UP! 🎡 Off to Surprise Wonderland! 🏆")
 	AudioManager.play_sfx("combo")
 	
-	GameManager.level5_wheel_completed = true
 	var tw := create_tween()
-	tw.tween_interval(2.0)
+	tw.tween_interval(3.0)
 	tw.tween_callback(func():
-		GameManager.complete_level(5)
-		GameManager.load_secret_ending(true)
+		if not level_finished:
+			_on_continue_pressed()
 	)
 
 # ------------------------------------------------------------------------------

@@ -175,6 +175,7 @@ func _test_wheel_slices_count() -> Dictionary:
 		res["error"] = "Could not load level5_lucky_wheel.tscn"
 		return res
 	var instance = scene.instantiate()
+	add_child(instance)
 	
 	if not ("SLICES" in instance):
 		res["error"] = "SLICES not found on Level 5 instance (script may have compilation error)"
@@ -194,11 +195,65 @@ func _test_wheel_slices_count() -> Dictionary:
 		"Wiggle Attack 👋"
 	]
 	
-	for s in expected_slices:
-		if not s in instance.SLICES:
-			res["error"] = "Missing expected slice: %s" % s
+	for i in range(5):
+		if instance.SLICES[i] != expected_slices[i]:
+			res["error"] = "Slice %d expected '%s', found '%s'" % [i, expected_slices[i], instance.SLICES[i]]
 			instance.queue_free()
 			return res
+
+	var expected_actions := [
+		"robot_dance",
+		"funny_actions",
+		"hands_up",
+		"chicken_dance",
+		"wiggle_attack"
+	]
+
+	# Test each of the 5 sectors individually
+	for i in range(5):
+		instance.set_target_sector(i)
+		if instance.target_slice_idx != i:
+			res["error"] = "Sector %d target_slice_idx mismatch: got %d" % [i, instance.target_slice_idx]
+			instance.queue_free()
+			return res
+		
+		var phi: float = float(i) * (2.0 * PI / 5.0)
+		var expected_offset := fmod(TAU - phi, TAU)
+		var expected_angle := (TAU * 5.0) + expected_offset
+		if absf(instance.target_angle - expected_angle) > 0.001:
+			res["error"] = "Sector %d target angle error: expected %f, got %f" % [i, expected_angle, instance.target_angle]
+			instance.queue_free()
+			return res
+			
+		instance._activate_outcome_ui()
+		if instance.active_challenge_name != expected_actions[i]:
+			res["error"] = "Sector %d mapped to action '%s', expected '%s'" % [i, instance.active_challenge_name, expected_actions[i]]
+			instance.queue_free()
+			return res
+			
+		instance.result_displayed = false
+		instance._show_final_result(true)
+		if instance.event_title.text != "SUCCESSFULLY COMPLETED! 🎉":
+			res["error"] = "Sector %d final result title mismatch: got '%s'" % [i, instance.event_title.text]
+			instance.queue_free()
+			return res
+		if not instance.continue_btn or not instance.continue_btn.visible:
+			res["error"] = "Sector %d success screen missing visible CONTINUE button" % i
+			instance.queue_free()
+			return res
+
+	# Test boundary and wraparound testing
+	instance.set_target_sector(5)
+	if instance.target_slice_idx != 0:
+		res["error"] = "Wraparound boundary check for index 5 failed: got %d" % instance.target_slice_idx
+		instance.queue_free()
+		return res
+
+	instance.set_target_sector(-1)
+	if instance.target_slice_idx != 4:
+		res["error"] = "Wraparound boundary check for index -1 failed: got %d" % instance.target_slice_idx
+		instance.queue_free()
+		return res
 			
 	instance.queue_free()
 	res["pass"] = true

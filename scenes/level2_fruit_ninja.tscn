@@ -13,16 +13,18 @@ _data = [Vector2(0, 0.2), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]
 point_count = 2
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_modal_card"]
-bg_color = Color(0.12, 0.09, 0.26, 0.96)
-border_width_left = 3
-border_width_top = 3
-border_width_right = 3
-border_width_bottom = 3
-border_color = Color(1, 0.85, 0.25, 1)
+bg_color = Color(0.99, 0.97, 0.93, 0.98)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.85, 0.65, 0.35, 1)
 corner_radius_top_left = 20
 corner_radius_top_right = 20
 corner_radius_bottom_right = 20
 corner_radius_bottom_left = 20
+shadow_color = Color(0.2, 0.15, 0.1, 0.25)
+shadow_size = 10
 shadow_color = Color(1, 0.75, 0.2, 0.3)
 shadow_size = 14
 
@@ -119,37 +121,40 @@ alignment = 1
 
 [node name="Title" type="Label" parent="VictoryOverlay/Card/Margin/VBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.88, 0.25, 1)
-theme_override_colors/font_shadow_color = Color(0.9, 0.3, 0.1, 0.9)
-theme_override_constants/shadow_offset_x = 2
-theme_override_constants/shadow_offset_y = 2
+theme_override_colors/font_color = Color(0.18, 0.1, 0.22, 1)
 theme_override_font_sizes/font_size = 28
-text = "SLICE IT! DICE IT! YOU NAILED IT! 🍉🏆"
+text = "SUCCESSFULLY COMPLETED! 🎉"
+horizontal_alignment = 1
+
+[node name="ChallengeLabel" type="Label" parent="VictoryOverlay/Card/Margin/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.28, 0.16, 0.32, 1)
+theme_override_font_sizes/font_size = 20
+text = "Challenge Completed: Fruit Ninja 🍉"
 horizontal_alignment = 1
 
 [node name="ScoreLabel" type="Label" parent="VictoryOverlay/Card/Margin/VBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.35, 1, 0.6, 1)
-theme_override_font_sizes/font_size = 22
+theme_override_colors/font_color = Color(0.15, 0.38, 0.2, 1)
+theme_override_font_sizes/font_size = 18
 text = "Total Fruits Sliced: 0 🍉"
 horizontal_alignment = 1
 
 [node name="DescLabel" type="Label" parent="VictoryOverlay/Card/Margin/VBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.95, 0.92, 1, 1)
+theme_override_colors/font_color = Color(0.32, 0.26, 0.35, 1)
 theme_override_font_sizes/font_size = 15
-text = "Incredible hand swipes and juicy tropical slicing!
-Your ninja blade mastery unlocked Level 2!"
+text = "Sensational hand swipes and blade mastery! You sliced like a true ninja!"
 horizontal_alignment = 1
 autowrap_mode = 2
 
 [node name="ContinueBtn" type="Button" parent="VictoryOverlay/Card/Margin/VBox"]
-custom_minimum_size = Vector2(300, 50)
+custom_minimum_size = Vector2(280, 48)
 layout_mode = 2
 size_flags_horizontal = 4
-theme_override_colors/font_color = Color(1, 1, 0.3, 1)
+theme_override_colors/font_color = Color(0.2, 0.12, 0.15, 1)
 theme_override_font_sizes/font_size = 18
-text = "Continue to Waddle Wars 🐧 ➔"
+text = "CONTINUE ➔"
 
 [node name="BombLossOverlay" type="CanvasLayer" parent="."]
 layer = 12

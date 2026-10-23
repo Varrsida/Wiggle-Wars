@@ -425,7 +425,7 @@ func _on_level_timer_complete() -> void:
 			GameManager.load_secret_ending(true)
 		)
 	else:
-		hud.set_instruction("TIME'S UP! (%d / 5 Expressions). Spin the Lucky Wheel for redemption! 🎡" % done_count)
+		hud.set_instruction("TIME'S UP! (%d / 5 Expressions). Off to Surprise Wonderland! 🌸" % done_count)
 		AudioManager.play_sfx("boing")
 		
 		if defeat_overlay:
@@ -436,7 +436,8 @@ func _on_level_timer_complete() -> void:
 		var tw := create_tween()
 		tw.tween_interval(3.2)
 		tw.tween_callback(func():
-			get_tree().change_scene_to_file("res://scenes/level5_lucky_wheel.tscn")
+			GameManager.complete_level(3)
+			GameManager.load_secret_ending(true)
 		)
 
 func _on_victory_continue_pressed() -> void:
@@ -446,7 +447,8 @@ func _on_victory_continue_pressed() -> void:
 
 func _on_defeat_wheel_pressed() -> void:
 	AudioManager.play_sfx("chime")
-	get_tree().change_scene_to_file("res://scenes/level5_lucky_wheel.tscn")
+	GameManager.complete_level(3)
+	GameManager.load_secret_ending(true)
 
 # ------------------------------------------------------------------------------
 # ILLUSTRATED GARDEN ENVIRONMENT DRAWING

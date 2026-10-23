@@ -42,72 +42,57 @@ func _ready() -> void:
 	entry_panel.visible = false
 	collectibles_row.visible = false
 	
-	title_label.text = "%s COMPLETE! 🎉" % GameManager.LEVEL_NAMES.get(current_lvl, "LEVEL").to_upper()
+	title_label.text = "SUCCESSFULLY COMPLETED! 🎉"
 	
-	# Configure Level-Specific Results
+	# Configure Level-Specific Results with Standard 5-Point Hierarchy
 	match current_lvl:
 		1:
-			status_label.text = "🌸 Every Little Move Becomes a Magical Memory! ✨"
-			status_label.add_theme_color_override("font_color", Color(1.0, 0.78, 0.92))
-			status_label.add_theme_color_override("font_shadow_color", Color(0.85, 0.25, 0.75, 0.85))
-			details_label.text = "🌸 Magical Garden Bloomed!\n• Expressions Conquered: Radiant Smiles, Bubbles, Star Bursts\n• Twilight garden & magical wind gusts activated!\n• All 5 facial expressions performed independently!"
-			continue_btn.text = "Continue to Level 2 Entry ➔"
+			status_label.text = "Challenge Completed: Fruit Ninja 🍉"
+			status_label.add_theme_color_override("font_color", Color(0.9, 0.45, 0.1))
+			var fruits_count := GameManager.level1_fruits_sliced
+			details_label.text = "Total Fruits Sliced: %d 🍉\nFast blade combos and real hand swipes executed!" % fruits_count
+			badge_label.text = "Fantastic slicing! You conquered the tropical arena!"
+			continue_btn.text = "CONTINUE ➔"
 
 		2:
-			var fruits_count := GameManager.level2_fruits_sliced
-			status_label.text = "🍉 TOTAL TROPICAL FRUITS SLICED: %d! 🏆" % fruits_count
-			status_label.add_theme_color_override("font_color", Color(1.0, 0.88, 0.25))
-			status_label.add_theme_color_override("font_shadow_color", Color(0.9, 0.35, 0.1, 0.9))
-			details_label.text = "🍉 Tropical Arena Sliced!\n• Total Fruits Sliced: %d 🍉\n• Real Hand Swipes & Fast Blade Combos executed!\n• Playful Firecrackers Triggered: Confetti sparks & celebration!\n• Master of the Blade!" % fruits_count
-			continue_btn.text = "Continue to Level 3 Entry ➔"
-
-		3:
-			var crystals := GameManager.level3_crystals_collected
-			var fish := GameManager.level3_fish_collected
+			status_label.text = "Challenge Completed: Waddle Wars 🐧"
+			status_label.add_theme_color_override("font_color", Color(0.1, 0.5, 0.9))
+			var crystals := GameManager.level2_crystals_collected
+			var fish := GameManager.level2_fish_collected
 			var total := crystals + fish
-			status_label.text = "❄️ TOTAL COLLECTIBLES GATHERED: %d! 💎" % total
-			status_label.add_theme_color_override("font_color", Color(0.4, 0.95, 1.0))
-			status_label.add_theme_color_override("font_shadow_color", Color(0.1, 0.5, 0.9, 0.9))
-			
 			collectibles_row.visible = true
 			crystal_count_lbl.text = str(crystals)
 			fish_count_lbl.text = str(fish)
-			
-			# Animate collectible cards with subtle celebratory bouncing tweens
 			_animate_collectible_card(crystal_card, 0.0)
 			_animate_collectible_card(fish_card, 0.15)
-			
-			# Continuous gentle icy glitter
 			icy_glitter.emitting = true
-			
-			details_label.text = "🐧 Cute Baby Penguin Hero Guided Safely!\n• Crystals Gathered: %d 💎  |  Icy Fish Caught: %d 🐟\n• Full body motions: Leans, Jumps, Slides & Squats!\n• Baby penguin in blue beanie safely scaled the snowy peaks!" % [crystals, fish]
-			continue_btn.text = "Continue to Level 4 Entry ➔"
+			details_label.text = "Crystals: %d 💎  |  Icy Fish: %d 🐟  |  Total Gathered: %d" % [crystals, fish, total]
+			badge_label.text = "Quack & waddle! The cutest arctic moves on the snowy peaks!"
+			continue_btn.text = "CONTINUE ➔"
+
+		3:
+			status_label.text = "Challenge Completed: Face Frenzy 🌸"
+			status_label.add_theme_color_override("font_color", Color(0.85, 0.25, 0.75))
+			details_label.text = "Facial Actions Completed: 5 / 5 Expressions Conquered ✔\nRadiant Smiles, Bubbles, Star Bursts, Twilight & Wind Gusts!"
+			badge_label.text = "Radiant smiles and wonderful energy bloomed the magical garden!"
+			continue_btn.text = "CONTINUE ➔"
 
 		4:
-			status_label.text = "🎭 SHINCHAN'S STAGE SUPERSTAR! 🔥"
-			status_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
-			status_label.add_theme_color_override("font_shadow_color", Color(0.95, 0.2, 0.4, 0.9))
-			
-			# Continuous golden/rainbow sparkles
+			status_label.text = "Challenge Completed: Shin Chan Dialogue & Dance 🎭"
+			status_label.add_theme_color_override("font_color", Color(0.95, 0.45, 0.15))
 			golden_glitter.emitting = true
-			
-			details_label.text = "🎭 Shinchan's Workshop Stage Rocked!\n• Interactive Chatbot Conversations completed in Tamil & English!\n• Real Movements Mirrored: Waves, Crazy Dance, Hero Pose & Theme Song!\n• Red T-Shirt Shinchan gave a show-stopping performance!"
-			continue_btn.text = "Continue to Level 5 Entry ➔"
+			details_label.text = "Stage Performance: Superstar Moves & Dialogue Matched ✔\nInteractive chatbot and dances performed with Shin Chan!"
+			badge_label.text = "Balle Balle! Shin Chan is thrilled with your superstar energy!"
+			continue_btn.text = "CONTINUE ➔"
 
 		5:
 			var outcome := GameManager.level5_wheel_outcome
-			status_label.text = "🎡 30-SECOND CARNIVAL ROUND CONQUERED! 🏆"
-			status_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.25))
-			status_label.add_theme_color_override("font_shadow_color", Color(0.9, 0.25, 0.6, 0.85))
-			details_label.text = "🎡 Carnival Prize Wheel Completed in exactly 30 seconds!\n• Wheel Outcome: %s\n• All 5 Realms Genuinely Conquered with real computer-vision tracking!" % outcome
-			continue_btn.text = "Acknowledge & Continue 🌟"
+			status_label.text = "Challenge Completed: %s" % (outcome if outcome != "" else "Lucky Chaos Wheel 🎡")
+			status_label.add_theme_color_override("font_color", Color(0.85, 0.6, 0.1))
+			details_label.text = "Carnival Challenge: Full 20-Second Round Conquered ✔\nGenuine computer-vision tracking completed!"
+			badge_label.text = "Spectacular carnival performance! Pure champion energy!"
+			continue_btn.text = "CONTINUE ➔"
 
-	if StickerManager:
-		var st_data: Dictionary = StickerManager.get_sticker_data(current_lvl)
-		badge_label.text = "🌟 STICKER COLLECTED: %s (Saved to Scrapbook!)" % st_data.get("name", "Sticker")
-	else:
-		badge_label.text = "🌟 PARTY PERFORMANCE: SPECTACULAR!"
-		
 	AudioManager.play_sfx("combo")
 
 func _animate_collectible_card(card: Control, delay: float) -> void:
@@ -141,15 +126,15 @@ func _on_continue_pressed() -> void:
 func _populate_entry_panel(next_lvl: int) -> void:
 	match next_lvl:
 		2:
-			entry_next_title.text = "LEVEL 2: FRUIT NINJA 🍉"
-			entry_next_subtitle.text = "Neon Tropical Fruit Arena"
-			entry_briefing_label.text = "• Wave your hand in front of the camera to slice flying fruit!\n• Slice Watermelons, Bananas, Pineapples & Kiwi for juicy splash combos!\n• Avoid bombs — slicing a bomb triggers a playful firecracker burst!\n• Keep slicing until the session finishes!"
+			entry_next_title.text = "LEVEL 2: WADDLE WARS 🐧"
+			entry_next_subtitle.text = "Icy Mountain Expedition"
+			entry_briefing_label.text = "• Guide our cute baby penguin wearing his blue beanie!\n• Lean your body LEFT or RIGHT to steer along the snowy paths.\n• Raise BOTH HANDS to leap over deep ice crevices.\n• SQUAT DOWN to belly-slide smoothly under frozen crystal arches.\n• Collect shimmering crystals 💎 and fresh icy fish 🐟!"
 			start_level_btn.text = "▶️ START LEVEL 2"
 
 		3:
-			entry_next_title.text = "LEVEL 3: ARCTIC WADDLER (WADDLE WARS) 🐧"
-			entry_next_subtitle.text = "Icy Mountain Expedition"
-			entry_briefing_label.text = "• Guide our cute baby penguin wearing his blue beanie!\n• Lean your body LEFT or RIGHT to steer along the snowy paths.\n• Raise BOTH HANDS to leap over deep ice crevices.\n• SQUAT DOWN to belly-slide smoothly under frozen crystal arches.\n• Collect shimmering crystals 💎 and fresh icy fish 🐟!"
+			entry_next_title.text = "LEVEL 3: FACE FRENZY 🌸"
+			entry_next_subtitle.text = "Enchanted Flower Garden"
+			entry_briefing_label.text = "• Use your facial expressions in front of the webcam!\n• Radiant Smile blooms flowers, Open Mouth blows bubbles!\n• Eyebrows raise star bursts, Sleepy Face triggers twilight garden!\n• Surprised Face unleashes magical wind gusts!"
 			start_level_btn.text = "▶️ START LEVEL 3"
 
 		4:
@@ -160,8 +145,8 @@ func _populate_entry_panel(next_lvl: int) -> void:
 
 		5:
 			entry_next_title.text = "LEVEL 5: LUCKY CHAOS WHEEL 🎡"
-			entry_next_subtitle.text = "30-Second Carnival Grand Fairground"
-			entry_briefing_label.text = "• Step right up to the official giant Lucky Chaos Wheel!\n• Touch the wheel with your hand or click 'SPIN THE WHEEL'!\n• Exactly 30-Second session:\n  - 0–4s: Wheel spin & single outcome selection\n  - 4–19s: 15-second challenge or activity\n  - 19–24s: Reward & result reveal\n  - 24–30s: Grand carnival finale & celebration!"
+			entry_next_subtitle.text = "Carnival Grand Fairground"
+			entry_briefing_label.text = "• Step right up to the official giant Lucky Chaos Wheel!\n• Touch the wheel with your hand or click 'SPIN THE WHEEL'!\n• Spin for wild prizes and hilarious interactive challenges!\n• Silly Dance, Funny Face, Hands Up, Penguin Waddle & Wiggle Attack!"
 			start_level_btn.text = "▶️ START LEVEL 5"
 
 func _on_start_level_pressed() -> void:
